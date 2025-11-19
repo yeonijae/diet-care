@@ -22,6 +22,8 @@ export const getDeviceId = (): string => {
 // Patient operations
 export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLogs' | 'mealLogs'>): Promise<Patient | null> => {
   try {
+    console.log('Creating patient with data:', patientData);
+
     const { data, error } = await supabase
       .from('patients')
       .insert({
@@ -38,7 +40,10 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
 
     return {
       id: data.id,
@@ -62,13 +67,22 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
 
 export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | null> => {
   try {
+    console.log('Fetching patient by device ID:', deviceId);
+
     const { data: patientData, error: patientError } = await supabase
       .from('patients')
       .select('*')
       .eq('device_id', deviceId)
       .single();
 
-    if (patientError) throw patientError;
+    if (patientError) {
+      console.error('Supabase fetch error:', patientError);
+      // If no rows found, return null instead of throwing
+      if (patientError.code === 'PGRST116') {
+        return null;
+      }
+      throw patientError;
+    }
 
     // Fetch weight logs
     const { data: weightLogs, error: weightError } = await supabase
