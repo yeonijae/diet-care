@@ -21,9 +21,12 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
       const phone = userInfo.kakao_account.phone_number?.replace('+82 ', '0').replace(/-/g, '');
 
       onKakaoLogin(kakaoId, nickname, phone);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Kakao login error:', error);
-      alert('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
+
+      // Show detailed error message
+      const errorMessage = error?.message || '카카오 로그인에 실패했습니다.';
+      alert(`❌ ${errorMessage}\n\n브라우저 콘솔(F12)을 확인해주세요.`);
     }
   };
 
