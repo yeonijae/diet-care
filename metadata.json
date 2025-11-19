@@ -1,0 +1,7 @@
+{
+  "name": "DietCare AI",
+  "description": "AI-powered diet management app for patients and nutritionists.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

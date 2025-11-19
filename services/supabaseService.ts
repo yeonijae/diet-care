@@ -1,0 +1,301 @@
+import { supabase } from '../lib/supabase';
+import { Patient, MealLog, WeightLog } from '../types';
+
+// Device ID management
+export const getDeviceId = (): string => {
+  let deviceId = localStorage.getItem('dietcare_device_id');
+  if (!deviceId) {
+    deviceId = crypto.randomUUID ? crypto.randomUUID() : `device-${Date.now()}-${Math.random()}`;
+    localStorage.setItem('dietcare_device_id', deviceId);
+  }
+  return deviceId;
+};
+
+// Patient operations
+export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLogs' | 'mealLogs'>): Promise<Patient | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('patients')
+      .insert({
+        device_id: patientData.deviceId,
+        status: patientData.status,
+        name: patientData.name,
+        phone_number: patientData.phoneNumber,
+        joined_at: patientData.joinedAt,
+        age: patientData.age,
+        target_weight: patientData.targetWeight,
+        current_weight: patientData.currentWeight,
+        start_weight: patientData.startWeight,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      deviceId: data.device_id,
+      status: data.status,
+      name: data.name,
+      phoneNumber: data.phone_number,
+      joinedAt: data.joined_at,
+      age: data.age,
+      targetWeight: data.target_weight,
+      currentWeight: data.current_weight,
+      startWeight: data.start_weight,
+      weightLogs: [],
+      mealLogs: [],
+    };
+  } catch (error) {
+    console.error('Error creating patient:', error);
+    return null;
+  }
+};
+
+export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | null> => {
+  try {
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('device_id', deviceId)
+      .single();
+
+    if (patientError) throw patientError;
+
+    // Fetch weight logs
+    const { data: weightLogs, error: weightError } = await supabase
+      .from('weight_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: true });
+
+    if (weightError) throw weightError;
+
+    // Fetch meal logs
+    const { data: mealLogs, error: mealError } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: false });
+
+    if (mealError) throw mealError;
+
+    return {
+      id: patientData.id,
+      deviceId: patientData.device_id,
+      status: patientData.status,
+      name: patientData.name,
+      phoneNumber: patientData.phone_number,
+      joinedAt: patientData.joined_at,
+      age: patientData.age,
+      targetWeight: patientData.target_weight,
+      currentWeight: patientData.current_weight,
+      startWeight: patientData.start_weight,
+      weightLogs: weightLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        weight: parseFloat(log.weight),
+      })),
+      mealLogs: mealLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        imageUrl: log.image_url,
+        foodName: log.food_name,
+        calories: log.calories,
+        analysis: log.analysis,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching patient:', error);
+    return null;
+  }
+};
+
+export const getAllPatients = async (): Promise<Patient[]> => {
+  try {
+    const { data: patientsData, error: patientsError } = await supabase
+      .from('patients')
+      .select('*')
+      .order('joined_at', { ascending: false });
+
+    if (patientsError) throw patientsError;
+
+    // Fetch all weight logs and meal logs for all patients
+    const patientIds = patientsData.map((p) => p.id);
+
+    const { data: allWeightLogs } = await supabase
+      .from('weight_logs')
+      .select('*')
+      .in('patient_id', patientIds)
+      .order('date', { ascending: true });
+
+    const { data: allMealLogs } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .in('patient_id', patientIds)
+      .order('date', { ascending: false });
+
+    return patientsData.map((patient) => ({
+      id: patient.id,
+      deviceId: patient.device_id,
+      status: patient.status,
+      name: patient.name,
+      phoneNumber: patient.phone_number,
+      joinedAt: patient.joined_at,
+      age: patient.age,
+      targetWeight: patient.target_weight,
+      currentWeight: patient.current_weight,
+      startWeight: patient.start_weight,
+      weightLogs: (allWeightLogs || [])
+        .filter((log) => log.patient_id === patient.id)
+        .map((log) => ({
+          id: log.id,
+          date: log.date,
+          weight: parseFloat(log.weight),
+        })),
+      mealLogs: (allMealLogs || [])
+        .filter((log) => log.patient_id === patient.id)
+        .map((log) => ({
+          id: log.id,
+          date: log.date,
+          imageUrl: log.image_url,
+          foodName: log.food_name,
+          calories: log.calories,
+          analysis: log.analysis,
+        })),
+    }));
+  } catch (error) {
+    console.error('Error fetching all patients:', error);
+    return [];
+  }
+};
+
+export const updatePatient = async (patientId: string, updates: Partial<Patient>): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('patients')
+      .update({
+        status: updates.status,
+        current_weight: updates.currentWeight,
+        target_weight: updates.targetWeight,
+      })
+      .eq('id', patientId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error updating patient:', error);
+    return false;
+  }
+};
+
+// Weight log operations
+export const addWeightLog = async (patientId: string, weightLog: Omit<WeightLog, 'id'>): Promise<WeightLog | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('weight_logs')
+      .insert({
+        patient_id: patientId,
+        date: weightLog.date,
+        weight: weightLog.weight,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Also update patient's current weight
+    await supabase
+      .from('patients')
+      .update({ current_weight: weightLog.weight })
+      .eq('id', patientId);
+
+    return {
+      id: data.id,
+      date: data.date,
+      weight: parseFloat(data.weight),
+    };
+  } catch (error) {
+    console.error('Error adding weight log:', error);
+    return null;
+  }
+};
+
+// Meal log operations
+export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>): Promise<MealLog | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('meal_logs')
+      .insert({
+        patient_id: patientId,
+        date: mealLog.date,
+        image_url: mealLog.imageUrl,
+        food_name: mealLog.foodName,
+        calories: mealLog.calories,
+        analysis: mealLog.analysis,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      date: data.date,
+      imageUrl: data.image_url,
+      foodName: data.food_name,
+      calories: data.calories,
+      analysis: data.analysis,
+    };
+  } catch (error) {
+    console.error('Error adding meal log:', error);
+    return null;
+  }
+};
+
+// Image upload to Supabase Storage
+export const uploadMealImage = async (file: File, patientId: string): Promise<string | null> => {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${patientId}/${Date.now()}.${fileExt}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('meal-images')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('meal-images')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  } catch (error) {
+    console.error('Error uploading image:', error);
+    return null;
+  }
+};
+
+// Admin authentication (simple version - for production use proper auth)
+export const adminLogin = async (password: string): Promise<boolean> => {
+  // For demo purposes - in production, use Supabase Auth
+  const ADMIN_PASSWORD = 'admin1234';
+  return password === ADMIN_PASSWORD;
+};
+
+// Real-time subscription for admin dashboard
+export const subscribeToPatientUpdates = (callback: (payload: any) => void) => {
+  const channel = supabase
+    .channel('patients-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, callback)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'meal_logs' }, callback)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'weight_logs' }, callback)
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
