@@ -73,7 +73,7 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
         <div className="pt-8">
           <p className="text-xs text-gray-400">
             관리자이신가요?{' '}
-            <a href="/admin" className="text-brand-600 hover:text-brand-700 underline">
+            <a href="#/admin" className="text-brand-600 hover:text-brand-700 underline">
               관리자 페이지로 이동
             </a>
           </p>

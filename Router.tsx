@@ -6,26 +6,26 @@ interface RouterProps {
 
 export const Router: React.FC<RouterProps> = ({ children }) => {
   const [route, setRoute] = useState<string>(() => {
-    // Get initial route from URL
-    const path = window.location.pathname;
-    return path === '/' ? 'patient' : path.substring(1);
+    // Get initial route from URL hash
+    const hash = window.location.hash.substring(1) || '/';
+    return hash === '/' ? 'patient' : hash.substring(1);
   });
 
   useEffect(() => {
-    // Update URL when route changes
+    // Update URL hash when route changes
     const path = route === 'patient' ? '/' : `/${route}`;
-    window.history.pushState({}, '', path);
+    window.location.hash = path;
   }, [route]);
 
   useEffect(() => {
-    // Handle browser back/forward buttons
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      setRoute(path === '/' ? 'patient' : path.substring(1));
+    // Handle hash changes
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1) || '/';
+      setRoute(hash === '/' ? 'patient' : hash.substring(1));
     };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   return <>{children(route, setRoute)}</>;
