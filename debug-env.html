@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Environment Debug</title>
+</head>
+<body>
+    <h1>Environment Variables Debug</h1>
+    <pre id="output"></pre>
+    <script type="module">
+        const output = {
+            VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+            VITE_SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            GEMINI_API_KEY: import.meta.env.GEMINI_API_KEY,
+            urlLength: import.meta.env.VITE_SUPABASE_URL?.length,
+            keyLength: import.meta.env.VITE_SUPABASE_ANON_KEY?.length,
+            urlChars: Array.from(import.meta.env.VITE_SUPABASE_URL || '').map((c, i) => `${i}: ${c} (${c.charCodeAt(0)})`),
+            keyChars: Array.from(import.meta.env.VITE_SUPABASE_ANON_KEY?.substring(0, 50) || '').map((c, i) => `${i}: ${c} (${c.charCodeAt(0)})`),
+        };
+
+        document.getElementById('output').textContent = JSON.stringify(output, null, 2);
+    </script>
+</body>
+</html>
