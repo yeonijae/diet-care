@@ -41,7 +41,13 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
       .single();
 
     if (error) {
-      console.error('Supabase insert error:', error);
+      console.error('Supabase insert error details:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        fullError: JSON.stringify(error, null, 2)
+      });
       throw error;
     }
 
@@ -76,9 +82,16 @@ export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | 
       .single();
 
     if (patientError) {
-      console.error('Supabase fetch error:', patientError);
+      console.error('Supabase fetch error details:', {
+        message: patientError.message,
+        details: patientError.details,
+        hint: patientError.hint,
+        code: patientError.code,
+        fullError: JSON.stringify(patientError, null, 2)
+      });
       // If no rows found, return null instead of throwing
       if (patientError.code === 'PGRST116') {
+        console.log('No patient found for device ID, returning null');
         return null;
       }
       throw patientError;
