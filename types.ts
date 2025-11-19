@@ -26,6 +26,7 @@ export interface Patient {
   status: PatientStatus;
   name: string;
   phoneNumber: string;
+  birthdate?: string; // YYYY-MM-DD format for simple login verification
   joinedAt: string;
   age: number;
   targetWeight: number;

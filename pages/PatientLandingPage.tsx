@@ -4,10 +4,11 @@ import { initKakao, loginWithKakao } from '../services/kakaoService';
 
 interface PatientLandingPageProps {
   onStartSignup: () => void;
+  onStartLogin: () => void;
   onKakaoLogin: (kakaoId: string, nickname: string, phone?: string) => void;
 }
 
-export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartSignup, onKakaoLogin }) => {
+export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartSignup, onStartLogin, onKakaoLogin }) => {
   useEffect(() => {
     // Initialize Kakao SDK
     initKakao();
@@ -71,15 +72,16 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
           </div>
 
           <button
-            onClick={onStartSignup}
+            onClick={onStartLogin}
             className="group relative w-full flex items-center justify-center p-5 bg-brand-600 hover:bg-brand-700 rounded-2xl shadow-lg hover:shadow-xl transition-all text-white"
           >
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <UserPlus size={24} />
+                <Smartphone size={24} />
               </div>
               <div className="text-left">
                 <h3 className="font-bold text-lg">전화번호로 시작하기</h3>
+                <p className="text-xs text-brand-100">기존 환자는 간편 로그인</p>
               </div>
             </div>
           </button>

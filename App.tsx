@@ -12,6 +12,7 @@ import {
   createPatient,
   getPatientByDeviceId,
   getPatientByKakaoId,
+  getPatientByPhoneAndBirthdate,
   getAllPatients,
   updatePatient,
   subscribeToPatientUpdates
@@ -23,9 +24,10 @@ const App: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
 
   // Patient state
-  const [patientView, setPatientView] = useState<'landing' | 'signup' | 'pending' | 'dashboard'>('landing');
+  const [patientView, setPatientView] = useState<'landing' | 'login' | 'signup' | 'pending' | 'dashboard'>('landing');
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null);
-  const [signupForm, setSignupForm] = useState({ name: '', phone: '', age: '', weight: '', target: '' });
+  const [signupForm, setSignupForm] = useState({ name: '', phone: '', birthdate: '', age: '', weight: '', target: '' });
+  const [loginForm, setLoginForm] = useState({ name: '', phone: '', birthdate: '' });
 
   // Admin state
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
@@ -107,6 +109,7 @@ const App: React.FC = () => {
       status: 'PENDING',
       name: signupForm.name,
       phoneNumber: signupForm.phone,
+      birthdate: signupForm.birthdate || undefined,
       joinedAt: new Date().toISOString(),
       age: parseInt(signupForm.age) || 0,
       currentWeight: parseFloat(signupForm.weight) || 0,
@@ -127,6 +130,50 @@ const App: React.FC = () => {
       localStorage.removeItem('dietcare_kakao_id');
     } else {
       alert('가입 신청에 실패했습니다. 다시 시도해주세요.');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleSimpleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    // Try to find existing patient
+    const patient = await getPatientByPhoneAndBirthdate(
+      loginForm.phone,
+      loginForm.name,
+      loginForm.birthdate
+    );
+
+    if (patient) {
+      // Found existing patient - update device ID and log in
+      const deviceId = getDeviceId();
+      if (patient.deviceId !== deviceId) {
+        // Update device ID to current device
+        await updatePatient(patient.id, { ...patient, deviceId });
+      }
+
+      if (patient.status === 'ACTIVE') {
+        setCurrentPatient(patient);
+        setPatientView('dashboard');
+      } else if (patient.status === 'PENDING') {
+        setPatientView('pending');
+      } else if (patient.status === 'REJECTED') {
+        alert('가입이 거부되었습니다. 관리자에게 문의하세요.');
+        setPatientView('landing');
+      }
+    } else {
+      // No existing patient - go to signup with pre-filled data
+      setSignupForm({
+        name: loginForm.name,
+        phone: loginForm.phone,
+        birthdate: loginForm.birthdate,
+        age: '',
+        weight: '',
+        target: ''
+      });
+      setPatientView('signup');
     }
 
     setIsLoading(false);
@@ -186,6 +233,7 @@ const App: React.FC = () => {
       setSignupForm({
         name: nickname,
         phone: phone || '',
+        birthdate: '',
         age: '',
         weight: '',
         target: ''
@@ -229,8 +277,74 @@ const App: React.FC = () => {
         if (patientView === 'landing') {
           return <PatientLandingPage
             onStartSignup={() => setPatientView('signup')}
+            onStartLogin={() => setPatientView('login')}
             onKakaoLogin={handleKakaoLogin}
           />;
+        }
+
+        if (patientView === 'login') {
+          return (
+            <div className="min-h-screen flex flex-col bg-white p-6">
+              <div className="max-w-md mx-auto w-full">
+                <button onClick={() => setPatientView('landing')} className="mb-6 text-gray-500 hover:text-gray-800">
+                  ← 돌아가기
+                </button>
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">간편 로그인/가입</h1>
+                <p className="text-gray-500 mb-8 text-sm">
+                  기존 환자는 자동 로그인되고, 신규 환자는 추가 정보 입력 후 가입 신청됩니다.
+                </p>
+
+                <form onSubmit={handleSimpleLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
+                    <input
+                      required
+                      type="text"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      placeholder="홍길동"
+                      value={loginForm.name}
+                      onChange={e => setLoginForm({ ...loginForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">휴대폰 번호</label>
+                    <input
+                      required
+                      type="tel"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      placeholder="010-1234-5678"
+                      value={loginForm.phone}
+                      onChange={e => setLoginForm({ ...loginForm, phone: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">생년월일</label>
+                    <input
+                      required
+                      type="date"
+                      className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      value={loginForm.birthdate}
+                      onChange={e => setLoginForm({ ...loginForm, birthdate: e.target.value })}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">본인 확인용으로 사용됩니다</p>
+                  </div>
+
+                  <div className="pt-4">
+                    <Button type="submit" fullWidth className="bg-brand-600">
+                      <Smartphone size={18} /> 계속하기
+                    </Button>
+                  </div>
+                </form>
+
+                <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-800">
+                    <strong>기존 환자:</strong> 정보가 일치하면 자동 로그인됩니다.<br/>
+                    <strong>신규 환자:</strong> 추가 정보 입력 후 가입 신청이 진행됩니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
         }
 
         if (patientView === 'signup') {
@@ -253,6 +367,12 @@ const App: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">휴대폰 번호</label>
                     <input required type="tel" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="010-1234-5678"
                       value={signupForm.phone} onChange={e => setSignupForm({ ...signupForm, phone: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">생년월일 (선택)</label>
+                    <input type="date" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                      value={signupForm.birthdate} onChange={e => setSignupForm({ ...signupForm, birthdate: e.target.value })} />
+                    <p className="text-xs text-gray-500 mt-1">다음에 다른 기기에서 로그인할 때 사용됩니다</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

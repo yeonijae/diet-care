@@ -36,9 +36,12 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
       start_weight: patientData.startWeight,
     };
 
-    // Add kakao_id if provided
+    // Add optional fields if provided
     if (patientData.kakaoId) {
       insertData.kakao_id = patientData.kakaoId;
+    }
+    if (patientData.birthdate) {
+      insertData.birthdate = patientData.birthdate;
     }
 
     const { data, error } = await supabase
@@ -64,6 +67,7 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
       status: data.status,
       name: data.name,
       phoneNumber: data.phone_number,
+      birthdate: data.birthdate,
       joinedAt: data.joined_at,
       age: data.age,
       targetWeight: data.target_weight,
@@ -128,6 +132,7 @@ export const getPatientByKakaoId = async (kakaoId: string): Promise<Patient | nu
       status: patientData.status,
       name: patientData.name,
       phoneNumber: patientData.phone_number,
+      birthdate: patientData.birthdate,
       joinedAt: patientData.joined_at,
       age: patientData.age,
       targetWeight: patientData.target_weight,
@@ -149,6 +154,88 @@ export const getPatientByKakaoId = async (kakaoId: string): Promise<Patient | nu
     };
   } catch (error) {
     console.error('Error fetching patient by Kakao ID:', error);
+    return null;
+  }
+};
+
+export const getPatientByPhoneAndBirthdate = async (
+  phoneNumber: string,
+  name: string,
+  birthdate: string
+): Promise<Patient | null> => {
+  try {
+    console.log('Fetching patient by phone, name, and birthdate:', { phoneNumber, name, birthdate });
+
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .eq('name', name)
+      .eq('birthdate', birthdate)
+      .single();
+
+    if (patientError) {
+      console.error('Supabase fetch error details:', {
+        message: patientError.message,
+        details: patientError.details,
+        hint: patientError.hint,
+        code: patientError.code,
+        fullError: JSON.stringify(patientError, null, 2)
+      });
+      // If no rows found, return null instead of throwing
+      if (patientError.code === 'PGRST116') {
+        console.log('No patient found for given credentials, returning null');
+        return null;
+      }
+      throw patientError;
+    }
+
+    // Fetch weight logs
+    const { data: weightLogs, error: weightError } = await supabase
+      .from('weight_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: true });
+
+    if (weightError) throw weightError;
+
+    // Fetch meal logs
+    const { data: mealLogs, error: mealError } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: false });
+
+    if (mealError) throw mealError;
+
+    return {
+      id: patientData.id,
+      deviceId: patientData.device_id,
+      status: patientData.status,
+      name: patientData.name,
+      phoneNumber: patientData.phone_number,
+      birthdate: patientData.birthdate,
+      joinedAt: patientData.joined_at,
+      age: patientData.age,
+      targetWeight: patientData.target_weight,
+      currentWeight: patientData.current_weight,
+      startWeight: patientData.start_weight,
+      weightLogs: weightLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        weight: parseFloat(log.weight),
+      })),
+      mealLogs: mealLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        imageUrl: log.image_url,
+        foodName: log.food_name,
+        calories: log.calories,
+        analysis: log.analysis,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching patient by credentials:', error);
     return null;
   }
 };
@@ -203,6 +290,7 @@ export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | 
       status: patientData.status,
       name: patientData.name,
       phoneNumber: patientData.phone_number,
+      birthdate: patientData.birthdate,
       joinedAt: patientData.joined_at,
       age: patientData.age,
       targetWeight: patientData.target_weight,
@@ -258,6 +346,7 @@ export const getAllPatients = async (): Promise<Patient[]> => {
       status: patient.status,
       name: patient.name,
       phoneNumber: patient.phone_number,
+      birthdate: patient.birthdate,
       joinedAt: patient.joined_at,
       age: patient.age,
       targetWeight: patient.target_weight,
