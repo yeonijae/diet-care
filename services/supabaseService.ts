@@ -1,6 +1,14 @@
 import { supabase } from '../lib/supabase';
 import { Patient, MealLog, WeightLog } from '../types';
 
+// Debug environment variables
+console.log('Environment check:', {
+  hasSupabaseUrl: !!import.meta.env.VITE_SUPABASE_URL,
+  hasSupabaseKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY,
+  urlPrefix: import.meta.env.VITE_SUPABASE_URL?.substring(0, 30),
+  mode: import.meta.env.MODE,
+});
+
 // Device ID management
 export const getDeviceId = (): string => {
   let deviceId = localStorage.getItem('dietcare_device_id');
