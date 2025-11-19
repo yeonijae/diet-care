@@ -60,21 +60,21 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
     setIsAnalyzing(true);
     try {
-      // Upload image to Supabase Storage
-      const imageUrl = await uploadMealImage(file, patient.id);
+      // Compress image first (reduces size by ~70-90%)
+      const compressedBase64 = await compressImage(file);
+
+      // Upload compressed image to Supabase Storage
+      const imageUrl = await uploadMealImage(compressedBase64, patient.id);
       if (!imageUrl) {
         throw new Error('Image upload failed');
       }
 
-      // Compress image for AI analysis
-      const compressedBase64 = await compressImage(file);
-
-      // Send compressed image to AI
+      // Send compressed image to AI for analysis
       const analysis = await analyzeFoodImage(compressedBase64);
 
       const newMealData = {
         date: new Date().toISOString(),
-        imageUrl: imageUrl, // Use Supabase Storage URL
+        imageUrl: imageUrl, // Use Supabase Storage URL (compressed)
         foodName: analysis.foodName,
         calories: analysis.calories,
         analysis: analysis.analysis

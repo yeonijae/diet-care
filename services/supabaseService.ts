@@ -370,17 +370,44 @@ export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>
   }
 };
 
-// Image upload to Supabase Storage
-export const uploadMealImage = async (file: File, patientId: string): Promise<string | null> => {
+// Helper to convert base64 to Blob
+const base64ToBlob = (base64: string): Blob => {
+  const parts = base64.split(';base64,');
+  const contentType = parts[0].split(':')[1];
+  const raw = window.atob(parts[1]);
+  const rawLength = raw.length;
+  const uInt8Array = new Uint8Array(rawLength);
+
+  for (let i = 0; i < rawLength; i++) {
+    uInt8Array[i] = raw.charCodeAt(i);
+  }
+
+  return new Blob([uInt8Array], { type: contentType });
+};
+
+// Image upload to Supabase Storage (accepts compressed base64 or File)
+export const uploadMealImage = async (imageData: File | string, patientId: string): Promise<string | null> => {
   try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${patientId}/${Date.now()}.${fileExt}`;
+    let uploadBlob: Blob;
+    let fileName: string;
+
+    if (typeof imageData === 'string') {
+      // Compressed base64 image
+      uploadBlob = base64ToBlob(imageData);
+      fileName = `${patientId}/${Date.now()}.jpg`;
+    } else {
+      // Original file (fallback)
+      uploadBlob = imageData;
+      const fileExt = imageData.name.split('.').pop();
+      fileName = `${patientId}/${Date.now()}.${fileExt}`;
+    }
 
     const { error: uploadError } = await supabase.storage
       .from('meal-images')
-      .upload(fileName, file, {
+      .upload(fileName, uploadBlob, {
         cacheControl: '3600',
         upsert: false,
+        contentType: 'image/jpeg',
       });
 
     if (uploadError) throw uploadError;
