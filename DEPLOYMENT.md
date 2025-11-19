@@ -73,10 +73,27 @@ GitHub 인증이 필요한 경우:
 | `GEMINI_API_KEY` | `AIzaSyAj2ufaqJo0nfO1Coqvw9tEUN_bqU13VGw` |
 | `VITE_SUPABASE_URL` | `https://fzcggeytecbcpvqunkah.supabase.co` |
 | `VITE_SUPABASE_ANON_KEY` | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (전체 키) |
+| `VITE_KAKAO_JAVASCRIPT_KEY` | 카카오 JavaScript 키 (아래 섹션 참조) |
 
 **중요:**
 - 프로덕션에서는 `.env.local` 파일의 키를 사용하지 마세요
 - 보안을 위해 별도의 프로덕션 API 키를 발급받는 것을 권장합니다
+
+#### 카카오 JavaScript 키 발급 방법
+1. [카카오 Developers](https://developers.kakao.com) 접속 및 로그인
+2. `내 애플리케이션` → `애플리케이션 추가하기` 클릭
+3. 앱 이름 입력 (예: "연이재한의원 식단관리")
+4. 생성된 앱 선택 → `앱 키` 섹션에서 `JavaScript 키` 복사
+5. `플랫폼 설정` → `Web 플랫폼 등록`
+   - 사이트 도메인: `http://localhost:3005` (개발용)
+   - 사이트 도메인: Vercel 배포 URL (프로덕션용)
+6. `카카오 로그인` → `활성화 설정` ON
+7. `Redirect URI` 등록:
+   - `http://localhost:3005` (개발용)
+   - Vercel 배포 URL (프로덕션용)
+8. `동의항목` 설정:
+   - 필수: 닉네임, 프로필 이미지
+   - 선택: 카카오계정(이메일), 전화번호
 
 ### 2-5. 배포
 1. `Deploy` 버튼 클릭
@@ -89,7 +106,22 @@ GitHub 인증이 필요한 경우:
 
 ## 3. 배포 후 Supabase 설정
 
-### 3-1. CORS 설정
+### 3-1. kakao_id 컬럼 추가
+프로젝트의 `supabase-add-kakao-id.sql` 파일을 실행하여 데이터베이스 스키마를 업데이트하세요:
+
+1. Supabase 대시보드 → `SQL Editor`
+2. `New Query` 클릭
+3. `supabase-add-kakao-id.sql` 파일의 내용을 복사하여 붙여넣기
+4. `Run` 버튼 클릭
+
+이 스크립트는 다음을 수행합니다:
+- `patients` 테이블에 `kakao_id` 컬럼 추가
+- `kakao_id`에 대한 인덱스 생성
+- RLS 정책 업데이트 (카카오 로그인 지원)
+
+**참고:** 이미 simplified RLS policies를 사용 중이라면 (allow all for anon), 정책 업데이트 부분은 건너뛰어도 됩니다.
+
+### 3-2. CORS 설정
 1. Supabase 대시보드 → `Settings` → `API`
 2. `CORS Allowed Origins`에 Vercel URL 추가:
    ```
@@ -97,7 +129,7 @@ GitHub 인증이 필요한 경우:
    https://diet-care-*.vercel.app
    ```
 
-### 3-2. Redirect URLs 설정 (선택사항)
+### 3-3. Redirect URLs 설정 (선택사항)
 1. Supabase 대시보드 → `Authentication` → `URL Configuration`
 2. `Site URL`: Vercel 배포 URL 입력
 3. `Redirect URLs`: Vercel 도메인 추가
@@ -137,13 +169,16 @@ Vercel이 자동으로:
 
 배포 후 다음을 확인하세요:
 
-- [ ] 환자 가입 기능 테스트
+- [ ] 카카오 로그인 기능 테스트
+- [ ] 카카오 로그인 후 자동 로그인 확인
+- [ ] 전화번호 가입 기능 테스트
 - [ ] 관리자 로그인 및 승인 기능
 - [ ] 식단 사진 업로드 및 AI 분석
 - [ ] 체중 기록 기능
 - [ ] 모바일 반응형 디자인
 - [ ] Supabase 데이터 저장 확인
 - [ ] 이미지 Storage 업로드 확인
+- [ ] kakao_id 컬럼이 patients 테이블에 추가되었는지 확인
 
 ---
 

@@ -11,10 +11,12 @@ import {
   getDeviceId,
   createPatient,
   getPatientByDeviceId,
+  getPatientByKakaoId,
   getAllPatients,
   updatePatient,
   subscribeToPatientUpdates
 } from './services/supabaseService';
+import { isKakaoLoggedIn, getSavedKakaoUserId, getKakaoUserInfo } from './services/kakaoService';
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -32,8 +34,22 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadPatientData = async () => {
       setIsLoading(true);
-      const deviceId = getDeviceId();
-      const patient = await getPatientByDeviceId(deviceId);
+
+      let patient = null;
+
+      // First, check if user has Kakao login
+      if (isKakaoLoggedIn()) {
+        const kakaoUserId = getSavedKakaoUserId();
+        if (kakaoUserId) {
+          patient = await getPatientByKakaoId(kakaoUserId);
+        }
+      }
+
+      // If no Kakao patient, check device ID
+      if (!patient) {
+        const deviceId = getDeviceId();
+        patient = await getPatientByDeviceId(deviceId);
+      }
 
       if (patient) {
         if (patient.status === 'ACTIVE') {
@@ -84,7 +100,9 @@ const App: React.FC = () => {
     setIsLoading(true);
 
     const deviceId = getDeviceId();
-    const newPatientData: Omit<Patient, 'id' | 'weightLogs' | 'mealLogs'> = {
+    const kakaoId = localStorage.getItem('dietcare_kakao_id');
+
+    const newPatientData: any = {
       deviceId: deviceId,
       status: 'PENDING',
       name: signupForm.name,
@@ -96,10 +114,17 @@ const App: React.FC = () => {
       targetWeight: parseFloat(signupForm.target) || 0,
     };
 
+    // Add kakao_id if exists
+    if (kakaoId) {
+      newPatientData.kakaoId = kakaoId;
+    }
+
     const createdPatient = await createPatient(newPatientData);
 
     if (createdPatient) {
       setPatientView('pending');
+      // Clear the temporary kakao_id from localStorage
+      localStorage.removeItem('dietcare_kakao_id');
     } else {
       alert('가입 신청에 실패했습니다. 다시 시도해주세요.');
     }
@@ -133,6 +158,46 @@ const App: React.FC = () => {
     setPatients([]);
   };
 
+  const handleKakaoLogin = async (kakaoId: string, nickname: string, phone?: string) => {
+    setIsLoading(true);
+
+    // Check if patient exists with this kakao_id
+    let patient = await getPatientByKakaoId(kakaoId);
+
+    // Also check by device ID in case patient was created before Kakao login
+    if (!patient) {
+      const deviceId = getDeviceId();
+      patient = await getPatientByDeviceId(deviceId);
+    }
+
+    if (patient) {
+      // Existing patient - check status
+      if (patient.status === 'ACTIVE') {
+        setCurrentPatient(patient);
+        setPatientView('dashboard');
+      } else if (patient.status === 'PENDING') {
+        setPatientView('pending');
+      } else if (patient.status === 'REJECTED') {
+        localStorage.removeItem('dietcare_device_id');
+        setPatientView('landing');
+      }
+    } else {
+      // New patient - pre-fill signup form with Kakao data and save kakao_id
+      setSignupForm({
+        name: nickname,
+        phone: phone || '',
+        age: '',
+        weight: '',
+        target: ''
+      });
+      // Save kakao_id to localStorage so we can use it in signup
+      localStorage.setItem('dietcare_kakao_id', kakaoId);
+      setPatientView('signup');
+    }
+
+    setIsLoading(false);
+  };
+
   return (
     <Router>
       {(route, setRoute) => {
@@ -162,7 +227,10 @@ const App: React.FC = () => {
 
         // Patient routes
         if (patientView === 'landing') {
-          return <PatientLandingPage onStartSignup={() => setPatientView('signup')} />;
+          return <PatientLandingPage
+            onStartSignup={() => setPatientView('signup')}
+            onKakaoLogin={handleKakaoLogin}
+          />;
         }
 
         if (patientView === 'signup') {

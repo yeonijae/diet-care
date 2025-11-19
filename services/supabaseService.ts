@@ -20,23 +20,30 @@ export const getDeviceId = (): string => {
 };
 
 // Patient operations
-export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLogs' | 'mealLogs'>): Promise<Patient | null> => {
+export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLogs' | 'mealLogs'> & { kakaoId?: string }): Promise<Patient | null> => {
   try {
     console.log('Creating patient with data:', patientData);
 
+    const insertData: any = {
+      device_id: patientData.deviceId,
+      status: patientData.status,
+      name: patientData.name,
+      phone_number: patientData.phoneNumber,
+      joined_at: patientData.joinedAt,
+      age: patientData.age,
+      target_weight: patientData.targetWeight,
+      current_weight: patientData.currentWeight,
+      start_weight: patientData.startWeight,
+    };
+
+    // Add kakao_id if provided
+    if (patientData.kakaoId) {
+      insertData.kakao_id = patientData.kakaoId;
+    }
+
     const { data, error } = await supabase
       .from('patients')
-      .insert({
-        device_id: patientData.deviceId,
-        status: patientData.status,
-        name: patientData.name,
-        phone_number: patientData.phoneNumber,
-        joined_at: patientData.joinedAt,
-        age: patientData.age,
-        target_weight: patientData.targetWeight,
-        current_weight: patientData.currentWeight,
-        start_weight: patientData.startWeight,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -67,6 +74,81 @@ export const createPatient = async (patientData: Omit<Patient, 'id' | 'weightLog
     };
   } catch (error) {
     console.error('Error creating patient:', error);
+    return null;
+  }
+};
+
+export const getPatientByKakaoId = async (kakaoId: string): Promise<Patient | null> => {
+  try {
+    console.log('Fetching patient by Kakao ID:', kakaoId);
+
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('kakao_id', kakaoId)
+      .single();
+
+    if (patientError) {
+      console.error('Supabase fetch error details:', {
+        message: patientError.message,
+        details: patientError.details,
+        hint: patientError.hint,
+        code: patientError.code,
+        fullError: JSON.stringify(patientError, null, 2)
+      });
+      // If no rows found, return null instead of throwing
+      if (patientError.code === 'PGRST116') {
+        console.log('No patient found for Kakao ID, returning null');
+        return null;
+      }
+      throw patientError;
+    }
+
+    // Fetch weight logs
+    const { data: weightLogs, error: weightError } = await supabase
+      .from('weight_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: true });
+
+    if (weightError) throw weightError;
+
+    // Fetch meal logs
+    const { data: mealLogs, error: mealError } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: false });
+
+    if (mealError) throw mealError;
+
+    return {
+      id: patientData.id,
+      deviceId: patientData.device_id,
+      status: patientData.status,
+      name: patientData.name,
+      phoneNumber: patientData.phone_number,
+      joinedAt: patientData.joined_at,
+      age: patientData.age,
+      targetWeight: patientData.target_weight,
+      currentWeight: patientData.current_weight,
+      startWeight: patientData.start_weight,
+      weightLogs: weightLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        weight: parseFloat(log.weight),
+      })),
+      mealLogs: mealLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        imageUrl: log.image_url,
+        foodName: log.food_name,
+        calories: log.calories,
+        analysis: log.analysis,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching patient by Kakao ID:', error);
     return null;
   }
 };

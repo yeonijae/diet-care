@@ -1,11 +1,32 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Smartphone, UserPlus } from 'lucide-react';
+import { initKakao, loginWithKakao } from '../services/kakaoService';
 
 interface PatientLandingPageProps {
   onStartSignup: () => void;
+  onKakaoLogin: (kakaoId: string, nickname: string, phone?: string) => void;
 }
 
-export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartSignup }) => {
+export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartSignup, onKakaoLogin }) => {
+  useEffect(() => {
+    // Initialize Kakao SDK
+    initKakao();
+  }, []);
+
+  const handleKakaoLogin = async () => {
+    try {
+      const userInfo = await loginWithKakao();
+      const kakaoId = userInfo.id.toString();
+      const nickname = userInfo.kakao_account.profile?.nickname || '환자';
+      const phone = userInfo.kakao_account.phone_number?.replace('+82 ', '0').replace(/-/g, '');
+
+      onKakaoLogin(kakaoId, nickname, phone);
+    } catch (error) {
+      console.error('Kakao login error:', error);
+      alert('카카오 로그인에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-brand-50 to-white p-6">
       <div className="w-full max-w-md space-y-8 text-center">
@@ -17,18 +38,36 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
           <p className="text-gray-500 text-lg">식단관리 시스템</p>
         </div>
 
-        <div className="pt-8">
+        <div className="pt-8 space-y-3">
+          <button
+            onClick={handleKakaoLogin}
+            className="group relative w-full flex items-center justify-center p-5 bg-[#FEE500] hover:bg-[#FDD835] rounded-2xl shadow-lg hover:shadow-xl transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3C6.477 3 2 6.477 2 10.8c0 2.754 1.797 5.166 4.476 6.561-.192.696-.63 2.295-.72 2.652-.108.423.155.418.328.304.138-.092 2.163-1.44 2.967-1.98C9.936 18.6 10.955 18.6 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z" fill="#3C1E1E"/>
+              </svg>
+              <div className="text-left">
+                <h3 className="font-bold text-lg text-[#3C1E1E]">카카오로 시작하기</h3>
+              </div>
+            </div>
+          </button>
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-gray-300 w-full"></div>
+            <span className="absolute bg-gradient-to-br from-brand-50 to-white px-3 text-sm text-gray-400">또는</span>
+          </div>
+
           <button
             onClick={onStartSignup}
-            className="group relative w-full flex items-center justify-center p-6 bg-brand-600 hover:bg-brand-700 rounded-2xl shadow-lg hover:shadow-xl transition-all text-white"
+            className="group relative w-full flex items-center justify-center p-5 bg-brand-600 hover:bg-brand-700 rounded-2xl shadow-lg hover:shadow-xl transition-all text-white"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <UserPlus size={28} />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                <UserPlus size={24} />
               </div>
               <div className="text-left">
-                <h3 className="font-bold text-xl">시작하기</h3>
-                <p className="text-sm text-brand-100">식단 기록을 시작하세요</p>
+                <h3 className="font-bold text-lg">전화번호로 시작하기</h3>
               </div>
             </div>
           </button>
