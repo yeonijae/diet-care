@@ -16,9 +16,18 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
   const handleKakaoLogin = async () => {
     try {
       const userInfo = await loginWithKakao();
+      console.log('Received user info:', userInfo);
+
       const kakaoId = userInfo.id.toString();
-      const nickname = userInfo.kakao_account.profile?.nickname || '환자';
-      const phone = userInfo.kakao_account.phone_number?.replace('+82 ', '0').replace(/-/g, '');
+
+      // Safely access nested properties with optional chaining
+      const nickname = userInfo.kakao_account?.profile?.nickname ||
+                       userInfo.properties?.nickname ||
+                       '카카오 사용자';
+
+      const phone = userInfo.kakao_account?.phone_number?.replace('+82 ', '0').replace(/-/g, '') || '';
+
+      console.log('Extracted info:', { kakaoId, nickname, phone });
 
       onKakaoLogin(kakaoId, nickname, phone);
     } catch (error: any) {

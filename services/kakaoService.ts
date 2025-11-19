@@ -6,14 +6,18 @@ declare global {
 }
 
 export interface KakaoUserInfo {
-  id: string;
-  kakao_account: {
+  id: string | number;
+  kakao_account?: {
     profile?: {
-      nickname: string;
+      nickname?: string;
       profile_image_url?: string;
     };
     email?: string;
     phone_number?: string;
+  };
+  properties?: {
+    nickname?: string;
+    profile_image?: string;
   };
 }
 
@@ -71,14 +75,20 @@ export const loginWithKakao = (): Promise<KakaoUserInfo> => {
     }
 
     window.Kakao.Auth.login({
+      scope: 'profile_nickname,profile_image', // Request profile information
       success: (authObj: any) => {
         console.log('✅ Kakao login success:', authObj);
 
-        // Get user info
+        // Get user info with proper scopes
         window.Kakao.API.request({
           url: '/v2/user/me',
-          success: (res: KakaoUserInfo) => {
+          data: {
+            property_keys: ['kakao_account.profile', 'properties.nickname']
+          },
+          success: (res: any) => {
             console.log('✅ Kakao user info received:', res);
+            console.log('kakao_account:', res.kakao_account);
+            console.log('properties:', res.properties);
 
             // Save to localStorage for auto-login
             localStorage.setItem('kakao_user_id', res.id.toString());
