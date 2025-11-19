@@ -10,11 +10,11 @@ export const PatientLandingPage: React.FC<PatientLandingPageProps> = ({ onStartS
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-brand-50 to-white p-6">
       <div className="w-full max-w-md space-y-8 text-center">
         <div className="space-y-2">
-          <div className="w-20 h-20 bg-brand-600 rounded-3xl flex items-center justify-center text-white text-4xl font-bold mx-auto shadow-xl shadow-brand-200 mb-6">
-            D
+          <div className="w-20 h-20 bg-brand-600 rounded-3xl flex items-center justify-center text-white text-3xl font-bold mx-auto shadow-xl shadow-brand-200 mb-6">
+            연
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">DietCare AI</h1>
-          <p className="text-gray-500 text-lg">AI 기반 식단 관리 서비스</p>
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">연이재한의원</h1>
+          <p className="text-gray-500 text-lg">식단관리 시스템</p>
         </div>
 
         <div className="pt-8">

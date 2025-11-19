@@ -66,8 +66,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ patients, onUpda
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center gap-2 text-brand-600">
-            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold">D</div>
-            <span className="text-xl font-bold tracking-tight">DietCare</span>
+            <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">연</div>
+            <span className="text-lg font-bold tracking-tight">연이재한의원</span>
           </div>
         </div>
         
@@ -142,7 +142,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ patients, onUpda
 
       {/* Mobile Header (only visible on small screens) */}
       <div className="md:hidden fixed inset-x-0 top-0 bg-white z-20 p-4 border-b flex justify-between items-center">
-         <span className="font-bold text-brand-600">DietCare Admin</span>
+         <span className="font-bold text-brand-600">연이재한의원 관리자</span>
          <Button variant="ghost" onClick={onLogout} className="!p-2 text-xs">로그아웃</Button>
       </div>
 

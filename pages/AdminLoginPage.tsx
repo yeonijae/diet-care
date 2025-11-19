@@ -40,7 +40,7 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLogin, onBack 
               <Monitor size={32} />
             </div>
             <h1 className="text-2xl font-bold text-gray-900">관리자 로그인</h1>
-            <p className="text-gray-500 text-sm mt-2">DietCare 관리 대시보드</p>
+            <p className="text-gray-500 text-sm mt-2">연이재한의원 식단관리</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
