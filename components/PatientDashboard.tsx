@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
 import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog, updateWeightLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale } from 'lucide-react';
+import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale, CalendarDays } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -464,9 +464,15 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         const updatedWeightLogs = patient.weightLogs.map(log =>
           log.id === weightLogId ? { ...log, weight: parseFloat(logWeight) } : log
         );
+        // Sort and get the most recent weight for currentWeight
+        const sortedLogs = [...updatedWeightLogs].sort((a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        const latestWeight = sortedLogs.length > 0 ? sortedLogs[0].weight : patient.currentWeight;
+
         const updatedPatient = {
           ...patient,
-          currentWeight: parseFloat(logWeight),
+          currentWeight: latestWeight,
           weightLogs: updatedWeightLogs
         };
         onUpdatePatient(updatedPatient);
@@ -1214,12 +1220,12 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
         <div className="w-px h-8 bg-gray-200" />
 
-        <button 
+        <button
           onClick={() => setActiveTab('log')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'log' ? 'text-brand-600' : 'text-gray-400'}`}
         >
-          <Utensils size={24} />
-          <span className="text-[10px] font-medium">식단 내역</span>
+          <CalendarDays size={24} />
+          <span className="text-[10px] font-medium">달력뷰</span>
         </button>
       </nav>
     </div>
