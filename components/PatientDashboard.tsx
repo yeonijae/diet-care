@@ -579,23 +579,33 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                     기록된 식단이 없습니다.
                   </div>
                 ) : (
-                  patient.mealLogs.slice(0, 3).map((meal) => (
-                    <div key={meal.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3">
-                      <img src={meal.imageUrl} alt={meal.foodName} className="w-20 h-20 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-gray-900 truncate">{meal.foodName}</h4>
-                          <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded-md text-gray-600">
-                            {meal.calories} kcal
-                          </span>
+                  patient.mealLogs.slice(0, 3).map((meal) => {
+                    const isFailedAnalysis = meal.calories === 0 || meal.analysis === '(직접 입력)' || meal.analysis === '(수정됨)';
+                    return (
+                      <div
+                        key={meal.id}
+                        onClick={() => handleMealClick(meal)}
+                        className={`bg-white p-3 rounded-xl shadow-sm border flex gap-3 cursor-pointer hover:shadow-md transition-shadow ${isFailedAnalysis ? 'border-amber-200 bg-amber-50/50' : 'border-gray-100'}`}
+                      >
+                        <img src={meal.imageUrl} alt={meal.foodName} className="w-20 h-20 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-bold text-gray-900 truncate">{meal.foodName}</h4>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-md ${isFailedAnalysis ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {meal.calories} kcal
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{meal.analysis}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-xs text-gray-400">
+                              {new Date(meal.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            <span className="text-xs text-brand-600">탭하여 수정</span>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{meal.analysis}</p>
-                        <p className="text-xs text-gray-400 mt-2">
-                          {new Date(meal.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
