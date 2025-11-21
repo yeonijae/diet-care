@@ -1030,7 +1030,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-500 text-sm">버전</span>
-                  <span className="text-sm text-gray-700">v1.1.7</span>
+                  <span className="text-sm text-gray-700">v1.1.8</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-500 text-sm">개발</span>

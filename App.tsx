@@ -180,17 +180,19 @@ const App: React.FC = () => {
   };
 
   const handlePatientUpdate = async (updatedPatient: Patient) => {
-    const success = await updatePatient(updatedPatient.id, updatedPatient);
-    if (success) {
-      setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+    // Update patient basic info in DB
+    await updatePatient(updatedPatient.id, updatedPatient);
 
-      if (currentPatient && currentPatient.id === updatedPatient.id) {
-        const refreshedPatient = await getPatientByDeviceId(getDeviceId());
-        if (refreshedPatient) {
-          setCurrentPatient(refreshedPatient);
-        }
+    // Always refresh from DB to get latest data including weight_logs and meal_logs
+    if (currentPatient && currentPatient.id === updatedPatient.id) {
+      const refreshedPatient = await getPatientByDeviceId(getDeviceId());
+      if (refreshedPatient) {
+        setCurrentPatient(refreshedPatient);
       }
     }
+
+    // Also update admin's patient list
+    setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
   };
 
   const handleAdminLogin = (password: string) => {
