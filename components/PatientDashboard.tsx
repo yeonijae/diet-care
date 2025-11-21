@@ -428,13 +428,16 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
   // Handle weight submit for selected date
   const handleLogWeightSubmit = async () => {
+    console.log('[handleLogWeightSubmit] Start - logWeight:', logWeight, 'selectedDate:', selectedDate);
     if (!logWeight) return;
 
     try {
+      console.log('[handleLogWeightSubmit] Adding weight log to DB...');
       const weightLog = await addWeightLog(patient.id, {
         date: selectedDate,
         weight: parseFloat(logWeight)
       });
+      console.log('[handleLogWeightSubmit] Weight log added:', weightLog);
 
       if (weightLog) {
         const updatedWeightLogs = [...patient.weightLogs, weightLog].sort((a, b) =>
@@ -451,11 +454,13 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           currentWeight: latestWeight,
           weightLogs: updatedWeightLogs
         };
+        console.log('[handleLogWeightSubmit] Calling onUpdatePatient with:', updatedPatient.weightLogs.length, 'weight logs');
         await onUpdatePatient(updatedPatient);
+        console.log('[handleLogWeightSubmit] onUpdatePatient complete!');
         setLogWeight('');
       }
     } catch (error) {
-      console.error(error);
+      console.error('[handleLogWeightSubmit] Error:', error);
       alert('체중 기록에 실패했습니다.');
     }
   };
@@ -1030,7 +1035,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-500 text-sm">버전</span>
-                  <span className="text-sm text-gray-700">v1.1.9</span>
+                  <span className="text-sm text-gray-700">v1.2.0</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-500 text-sm">개발</span>

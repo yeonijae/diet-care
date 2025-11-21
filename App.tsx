@@ -180,19 +180,35 @@ const App: React.FC = () => {
   };
 
   const handlePatientUpdate = async (updatedPatient: Patient) => {
+    console.log('[handlePatientUpdate] Called with:', updatedPatient);
+    console.log('[handlePatientUpdate] Current patient:', currentPatient?.id);
+
     // Update patient basic info in DB
-    await updatePatient(updatedPatient.id, updatedPatient);
+    const updateResult = await updatePatient(updatedPatient.id, updatedPatient);
+    console.log('[handlePatientUpdate] updatePatient result:', updateResult);
 
     // Always refresh from DB to get latest data including weight_logs and meal_logs
     if (currentPatient && currentPatient.id === updatedPatient.id) {
-      const refreshedPatient = await getPatientByDeviceId(getDeviceId());
+      console.log('[handlePatientUpdate] Refreshing patient from DB...');
+      const deviceId = getDeviceId();
+      console.log('[handlePatientUpdate] Device ID:', deviceId);
+
+      const refreshedPatient = await getPatientByDeviceId(deviceId);
+      console.log('[handlePatientUpdate] Refreshed patient:', refreshedPatient);
+      console.log('[handlePatientUpdate] Weight logs count:', refreshedPatient?.weightLogs?.length);
+
       if (refreshedPatient) {
+        console.log('[handlePatientUpdate] Setting currentPatient...');
         setCurrentPatient(refreshedPatient);
+        console.log('[handlePatientUpdate] currentPatient set!');
       }
+    } else {
+      console.log('[handlePatientUpdate] Skipping refresh - patient mismatch');
     }
 
     // Also update admin's patient list
     setPatients(prev => prev.map(p => p.id === updatedPatient.id ? updatedPatient : p));
+    console.log('[handlePatientUpdate] Complete');
   };
 
   const handleAdminLogin = (password: string) => {
