@@ -3,7 +3,8 @@ import { Patient, MealLog } from '../types';
 import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage } from '../services/geminiService';
 import { addWeightLog, addMealLog, uploadMealImage } from '../services/supabaseService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { extractPhotoTimestamp } from '../services/exifService';
+import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -25,7 +26,8 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleWeightSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +62,10 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
     setIsAnalyzing(true);
     try {
+      // Extract photo capture time from EXIF data (before compression)
+      const photoTimestamp = await extractPhotoTimestamp(file);
+      const uploadedAt = new Date().toISOString();
+
       // Compress image first (reduces size by ~70-90%)
       const compressedBase64 = await compressImage(file);
 
@@ -73,7 +79,8 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       const analysis = await analyzeFoodImage(compressedBase64);
 
       const newMealData = {
-        date: new Date().toISOString(),
+        date: photoTimestamp, // Photo capture time from EXIF or current time
+        uploadedAt: uploadedAt, // When the photo was uploaded
         imageUrl: imageUrl, // Use Supabase Storage URL (compressed)
         foodName: analysis.foodName,
         calories: analysis.calories,
@@ -89,9 +96,9 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         };
         onUpdatePatient(updatedPatient);
 
-        // Switch to log tab and select today
+        // Switch to log tab and select the date of the photo
         setActiveTab('log');
-        setSelectedDate(new Date().toISOString().split('T')[0]);
+        setSelectedDate(photoTimestamp.split('T')[0]);
       } else {
         throw new Error('Meal log save failed');
       }
@@ -258,31 +265,61 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
               <div className="p-5">
                 {inputMode === 'camera' ? (
                   <div className="text-center">
-                    <div className="mb-4 p-4 bg-brand-50 rounded-xl border border-brand-100 inline-block">
-                      <Camera size={32} className="text-brand-500 mx-auto" />
-                    </div>
-                    <p className="text-sm text-gray-600 mb-5">
-                      음식 사진을 촬영하면<br/>AI가 자동으로 영양소를 분석합니다.
+                    <p className="text-sm text-gray-600 mb-6">
+                      음식 사진을 촬영하거나 앨범에서 선택하면<br/>AI가 자동으로 영양소를 분석합니다.
                     </p>
+
+                    {/* Camera Input */}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      ref={cameraInputRef}
+                      onChange={handleImageUpload}
+                    />
+
+                    {/* Gallery Input */}
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
-                      ref={fileInputRef}
+                      ref={galleryInputRef}
                       onChange={handleImageUpload}
                     />
-                    <Button
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isAnalyzing}
-                      fullWidth
-                      className="bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 border-0 shadow-lg shadow-brand-200"
-                    >
-                      {isAnalyzing ? (
-                        <><Loader2 className="animate-spin" /> 분석중...</>
-                      ) : (
-                        <>카메라 켜기 / 앨범</>
-                      )}
-                    </Button>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      {/* Camera Button */}
+                      <button
+                        onClick={() => cameraInputRef.current?.click()}
+                        disabled={isAnalyzing}
+                        className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-brand-600 to-brand-500 hover:from-brand-700 hover:to-brand-600 rounded-2xl shadow-lg shadow-brand-200 text-white transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                      >
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3">
+                          <Camera size={32} />
+                        </div>
+                        <span className="text-sm font-semibold">카메라</span>
+                      </button>
+
+                      {/* Gallery Button */}
+                      <button
+                        onClick={() => galleryInputRef.current?.click()}
+                        disabled={isAnalyzing}
+                        className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 rounded-2xl shadow-lg shadow-purple-200 text-white transition-all hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
+                      >
+                        <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-3">
+                          <Image size={32} />
+                        </div>
+                        <span className="text-sm font-semibold">앨범</span>
+                      </button>
+                    </div>
+
+                    {isAnalyzing && (
+                      <div className="mt-4 flex items-center justify-center text-brand-600">
+                        <Loader2 className="animate-spin mr-2" size={20} />
+                        <span className="text-sm font-medium">분석중...</span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <form onSubmit={handleTextSubmit}>

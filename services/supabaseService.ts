@@ -146,6 +146,7 @@ export const getPatientByKakaoId = async (kakaoId: string): Promise<Patient | nu
       mealLogs: mealLogs.map((log) => ({
         id: log.id,
         date: log.date,
+        uploadedAt: log.uploaded_at,
         imageUrl: log.image_url,
         foodName: log.food_name,
         calories: log.calories,
@@ -228,6 +229,7 @@ export const getPatientByPhoneAndBirthdate = async (
       mealLogs: mealLogs.map((log) => ({
         id: log.id,
         date: log.date,
+        uploadedAt: log.uploaded_at,
         imageUrl: log.image_url,
         foodName: log.food_name,
         calories: log.calories,
@@ -304,6 +306,7 @@ export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | 
       mealLogs: mealLogs.map((log) => ({
         id: log.id,
         date: log.date,
+        uploadedAt: log.uploaded_at,
         imageUrl: log.image_url,
         foodName: log.food_name,
         calories: log.calories,
@@ -364,6 +367,7 @@ export const getAllPatients = async (): Promise<Patient[]> => {
         .map((log) => ({
           id: log.id,
           date: log.date,
+          uploadedAt: log.uploaded_at,
           imageUrl: log.image_url,
           foodName: log.food_name,
           calories: log.calories,
@@ -430,16 +434,23 @@ export const addWeightLog = async (patientId: string, weightLog: Omit<WeightLog,
 // Meal log operations
 export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>): Promise<MealLog | null> => {
   try {
+    const insertData: any = {
+      patient_id: patientId,
+      date: mealLog.date,
+      image_url: mealLog.imageUrl,
+      food_name: mealLog.foodName,
+      calories: mealLog.calories,
+      analysis: mealLog.analysis,
+    };
+
+    // Add uploaded_at if provided
+    if (mealLog.uploadedAt) {
+      insertData.uploaded_at = mealLog.uploadedAt;
+    }
+
     const { data, error } = await supabase
       .from('meal_logs')
-      .insert({
-        patient_id: patientId,
-        date: mealLog.date,
-        image_url: mealLog.imageUrl,
-        food_name: mealLog.foodName,
-        calories: mealLog.calories,
-        analysis: mealLog.analysis,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -448,6 +459,7 @@ export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>
     return {
       id: data.id,
       date: data.date,
+      uploadedAt: data.uploaded_at,
       imageUrl: data.image_url,
       foodName: data.food_name,
       calories: data.calories,

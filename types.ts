@@ -13,7 +13,8 @@ export interface WeightLog {
 
 export interface MealLog {
   id: string;
-  date: string; // ISO string
+  date: string; // ISO string - Photo capture time from EXIF or upload time
+  uploadedAt?: string; // ISO string - When the photo was uploaded
   imageUrl: string;
   foodName: string;
   calories: number;
