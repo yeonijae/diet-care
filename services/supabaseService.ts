@@ -431,6 +431,29 @@ export const addWeightLog = async (patientId: string, weightLog: Omit<WeightLog,
   }
 };
 
+// Update weight log
+export const updateWeightLog = async (weightLogId: string, weight: number, patientId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('weight_logs')
+      .update({ weight })
+      .eq('id', weightLogId);
+
+    if (error) throw error;
+
+    // Also update patient's current weight
+    await supabase
+      .from('patients')
+      .update({ current_weight: weight })
+      .eq('id', patientId);
+
+    return true;
+  } catch (error) {
+    console.error('Error updating weight log:', error);
+    return false;
+  }
+};
+
 // Meal log operations
 export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>): Promise<MealLog | null> => {
   try {

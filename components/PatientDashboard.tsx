@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Patient, MealLog } from '../types';
 import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
-import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog } from '../services/supabaseService';
+import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog, updateWeightLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
 import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -51,6 +51,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
   // Weight Input for selected date
   const [logWeight, setLogWeight] = useState('');
+  const [isEditingWeight, setIsEditingWeight] = useState(false);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -452,6 +453,32 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     }
   };
 
+  // Handle weight update for selected date
+  const handleLogWeightUpdate = async (weightLogId: string) => {
+    if (!logWeight) return;
+
+    try {
+      const success = await updateWeightLog(weightLogId, parseFloat(logWeight), patient.id);
+
+      if (success) {
+        const updatedWeightLogs = patient.weightLogs.map(log =>
+          log.id === weightLogId ? { ...log, weight: parseFloat(logWeight) } : log
+        );
+        const updatedPatient = {
+          ...patient,
+          currentWeight: parseFloat(logWeight),
+          weightLogs: updatedWeightLogs
+        };
+        onUpdatePatient(updatedPatient);
+        setLogWeight('');
+        setIsEditingWeight(false);
+      }
+    } catch (error) {
+      console.error(error);
+      alert('체중 수정에 실패했습니다.');
+    }
+  };
+
   const weightDiff = patient.currentWeight - patient.startWeight;
 
   // Calendar Logic
@@ -789,13 +816,19 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                     <div className="flex items-center gap-2">
                       <Scale size={18} className="text-gray-400" />
                       <span className="text-sm font-medium text-gray-600">체중</span>
-                      {selectedDateWeight && (
-                        <span className="text-sm font-bold text-brand-600 ml-auto">
+                      {selectedDateWeight && !isEditingWeight && (
+                        <button
+                          onClick={() => {
+                            setIsEditingWeight(true);
+                            setLogWeight(selectedDateWeight.weight.toString());
+                          }}
+                          className="text-sm font-bold text-brand-600 ml-auto hover:underline"
+                        >
                           {selectedDateWeight.weight} kg
-                        </span>
+                        </button>
                       )}
                     </div>
-                    {!selectedDateWeight && (
+                    {(!selectedDateWeight || isEditingWeight) && (
                       <div className="flex gap-2 mt-2">
                         <input
                           type="number"
@@ -805,12 +838,26 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                           placeholder="체중 입력 (kg)"
                           className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
                         />
+                        {isEditingWeight && (
+                          <button
+                            onClick={() => {
+                              setIsEditingWeight(false);
+                              setLogWeight('');
+                            }}
+                            className="px-3 py-2 bg-gray-100 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                          >
+                            취소
+                          </button>
+                        )}
                         <button
-                          onClick={handleLogWeightSubmit}
+                          onClick={() => selectedDateWeight && isEditingWeight
+                            ? handleLogWeightUpdate(selectedDateWeight.id)
+                            : handleLogWeightSubmit()
+                          }
                           disabled={!logWeight}
                           className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50"
                         >
-                          기록
+                          {isEditingWeight ? '수정' : '기록'}
                         </button>
                       </div>
                     )}
