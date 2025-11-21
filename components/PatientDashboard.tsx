@@ -742,31 +742,17 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 />
               </div>
 
-              {/* Food Name Input */}
+              {/* Food Name Input with AI Search Button */}
               <div className="mb-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   음식 이름 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={manualFoodName}
-                  onChange={(e) => setManualFoodName(e.target.value)}
-                  placeholder="예: 김치찌개, 샐러드"
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
-              </div>
-
-              {/* Calories Input with AI Estimate Button */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  예상 칼로리 (kcal)
-                </label>
                 <div className="flex gap-2">
                   <input
-                    type="number"
-                    value={manualCalories}
-                    onChange={(e) => setManualCalories(e.target.value)}
-                    placeholder="예: 500"
+                    type="text"
+                    value={manualFoodName}
+                    onChange={(e) => setManualFoodName(e.target.value)}
+                    placeholder="예: 김치찌개, 삼겹살"
                     className="flex-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                   />
                   <button
@@ -784,9 +770,19 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  음식 이름 입력 후 돋보기 버튼을 누르면 AI가 1인분 칼로리를 추정합니다
+                  음식 이름 입력 후 돋보기를 누르면 AI가 1인분 칼로리를 계산합니다
                 </p>
               </div>
+
+              {/* Calories Display */}
+              {manualCalories && (
+                <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-purple-700">예상 칼로리</span>
+                    <span className="text-lg font-bold text-purple-700">{manualCalories} kcal</span>
+                  </div>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-2">
@@ -841,31 +837,17 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 />
               </div>
 
-              {/* Food Name Input */}
+              {/* Food Name Input with AI Search Button */}
               <div className="mb-3">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   음식 이름 <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
-                  value={editFoodName}
-                  onChange={(e) => setEditFoodName(e.target.value)}
-                  placeholder="예: 김치찌개, 샐러드"
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
-              </div>
-
-              {/* Calories Input with AI Estimate Button */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  예상 칼로리 (kcal)
-                </label>
                 <div className="flex gap-2">
                   <input
-                    type="number"
-                    value={editCalories}
-                    onChange={(e) => setEditCalories(e.target.value)}
-                    placeholder="예: 500"
+                    type="text"
+                    value={editFoodName}
+                    onChange={(e) => setEditFoodName(e.target.value)}
+                    placeholder="예: 김치찌개, 삼겹살"
                     className="flex-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
                   />
                   <button
@@ -883,9 +865,19 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">
-                  음식 이름 입력 후 돋보기 버튼을 누르면 AI가 칼로리를 추정합니다
+                  음식 이름 입력 후 돋보기를 누르면 AI가 1인분 칼로리를 계산합니다
                 </p>
               </div>
+
+              {/* Calories Display */}
+              {editCalories && parseInt(editCalories) > 0 && (
+                <div className="mb-4 p-3 bg-purple-50 rounded-xl border border-purple-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-purple-700">예상 칼로리</span>
+                    <span className="text-lg font-bold text-purple-700">{editCalories} kcal</span>
+                  </div>
+                </div>
+              )}
 
               {/* Buttons */}
               <div className="flex gap-2">
