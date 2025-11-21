@@ -664,9 +664,9 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                         >
                           {day}
                         </button>
-                        {totalCalories > 0 && (
-                          <span className={`text-[10px] mt-1 font-medium tracking-tighter ${isSelected ? 'text-brand-600 font-bold' : 'text-gray-400'}`}>
-                            {totalCalories}
+                        {dayMeals.length > 0 && (
+                          <span className={`text-[10px] mt-1 font-medium tracking-tighter ${isSelected ? 'text-brand-600 font-bold' : totalCalories > 0 ? 'text-gray-400' : 'text-amber-500'}`}>
+                            {totalCalories > 0 ? totalCalories : '●'}
                           </span>
                         )}
                       </div>
