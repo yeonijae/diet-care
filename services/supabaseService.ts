@@ -574,6 +574,35 @@ export const uploadMealImage = async (imageData: File | string, patientId: strin
   }
 };
 
+// Delete patient and all related data
+export const deletePatient = async (patientId: string): Promise<boolean> => {
+  try {
+    // Delete weight logs
+    await supabase
+      .from('weight_logs')
+      .delete()
+      .eq('patient_id', patientId);
+
+    // Delete meal logs
+    await supabase
+      .from('meal_logs')
+      .delete()
+      .eq('patient_id', patientId);
+
+    // Delete patient
+    const { error } = await supabase
+      .from('patients')
+      .delete()
+      .eq('id', patientId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting patient:', error);
+    return false;
+  }
+};
+
 // Admin authentication (simple version - for production use proper auth)
 export const adminLogin = async (password: string): Promise<boolean> => {
   // For demo purposes - in production, use Supabase Auth

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Patient } from '../types';
 import { Button } from './Button';
-import { Users, Search, Calendar, ChevronRight, ArrowLeft, PieChart, Activity, LayoutGrid, List, ChevronLeft, UserPlus, Check, X } from 'lucide-react';
+import { Users, Search, Calendar, ChevronRight, ArrowLeft, PieChart, Activity, LayoutGrid, List, ChevronLeft, UserPlus, Check, X, Trash2 } from 'lucide-react';
+import { deletePatient } from '../services/supabaseService';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 interface AdminDashboardProps {
@@ -57,6 +58,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ patients, onUpda
       await onUpdatePatient({ ...patient, status: 'REJECTED' });
       // Refresh the patient list after rejection
       window.location.reload();
+    }
+  };
+
+  const handleDeletePatient = async (patient: Patient) => {
+    if (window.confirm(`정말로 ${patient.name}님을 삭제하시겠습니까?\n\n⚠️ 모든 체중 기록과 식단 기록이 함께 삭제됩니다.\n이 작업은 되돌릴 수 없습니다.`)) {
+      const success = await deletePatient(patient.id);
+      if (success) {
+        alert('환자가 삭제되었습니다.');
+        window.location.reload();
+      } else {
+        alert('삭제에 실패했습니다.');
+      }
     }
   };
 
@@ -236,6 +249,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ patients, onUpda
                       나이: {selectedPatient.age}세 | {selectedPatient.phoneNumber}
                    </p>
                 </div>
+                <button
+                  onClick={() => handleDeletePatient(selectedPatient)}
+                  className="ml-2 p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                  title="환자 삭제"
+                >
+                  <Trash2 size={20} />
+                </button>
               </div>
               <div className="flex gap-4">
                 <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200 text-center">
