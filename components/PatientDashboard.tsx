@@ -30,7 +30,8 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     uploadedAt: string;
   } | null>(null);
   const [manualFoodName, setManualFoodName] = useState('');
-  const [manualMemo, setManualMemo] = useState('');
+  const [manualCalories, setManualCalories] = useState('');
+  const [isEstimatingManualCalories, setIsEstimatingManualCalories] = useState(false);
 
   // Edit Meal State (for editing existing meals)
   const [showEditMeal, setShowEditMeal] = useState(false);
@@ -158,8 +159,8 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         uploadedAt: pendingImageData.uploadedAt,
         imageUrl: pendingImageData.imageUrl,
         foodName: manualFoodName.trim(),
-        calories: 0, // Unknown calories
-        analysis: manualMemo.trim() || '(직접 입력)'
+        calories: parseInt(manualCalories) || 0,
+        analysis: '(직접 입력)'
       };
 
       const savedMeal = await addMealLog(patient.id, newMealData);
@@ -182,7 +183,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       setShowManualInput(false);
       setPendingImageData(null);
       setManualFoodName('');
-      setManualMemo('');
+      setManualCalories('');
       setIsAnalyzing(false);
     } catch (error) {
       console.error(error);
@@ -191,12 +192,34 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     }
   };
 
+  // Estimate calories for manual input modal
+  const handleEstimateManualCalories = async () => {
+    if (!manualFoodName.trim()) {
+      alert('음식 이름을 먼저 입력해주세요.');
+      return;
+    }
+
+    setIsEstimatingManualCalories(true);
+    try {
+      const calories = await estimateCalories(manualFoodName.trim());
+      if (calories > 0) {
+        setManualCalories(calories.toString());
+      } else {
+        alert('칼로리를 추정할 수 없습니다. 직접 입력해주세요.');
+      }
+    } catch (error) {
+      console.error('Error estimating calories:', error);
+      alert('칼로리 추정에 실패했습니다.');
+    }
+    setIsEstimatingManualCalories(false);
+  };
+
   // Cancel manual input
   const handleManualCancel = () => {
     setShowManualInput(false);
     setPendingImageData(null);
     setManualFoodName('');
-    setManualMemo('');
+    setManualCalories('');
   };
 
   // Open edit modal for a meal (especially for failed analysis meals)
@@ -733,18 +756,36 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 />
               </div>
 
-              {/* Memo Input */}
+              {/* Calories Input with AI Estimate Button */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  메모 (선택)
+                  예상 칼로리 (kcal)
                 </label>
-                <textarea
-                  value={manualMemo}
-                  onChange={(e) => setManualMemo(e.target.value)}
-                  placeholder="예: 점심 식사, 외식"
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm resize-none"
-                  rows={2}
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={manualCalories}
+                    onChange={(e) => setManualCalories(e.target.value)}
+                    placeholder="예: 500"
+                    className="flex-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleEstimateManualCalories}
+                    disabled={isEstimatingManualCalories || !manualFoodName.trim()}
+                    className="px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    title="AI로 칼로리 추정"
+                  >
+                    {isEstimatingManualCalories ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Search size={18} />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  음식 이름 입력 후 돋보기 버튼을 누르면 AI가 1인분 칼로리를 추정합니다
+                </p>
               </div>
 
               {/* Buttons */}
