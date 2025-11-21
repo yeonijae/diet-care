@@ -44,7 +44,11 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
-  
+
+  // Text Input Modal for selected date
+  const [showTextInputModal, setShowTextInputModal] = useState(false);
+  const [logTextInput, setLogTextInput] = useState('');
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const logCameraInputRef = useRef<HTMLInputElement>(null);
@@ -368,6 +372,44 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         // Switch to log tab and select today
         setActiveTab('log');
         setSelectedDate(new Date().toISOString().split('T')[0]);
+      } else {
+        throw new Error('Meal log save failed');
+      }
+
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error(error);
+      setIsAnalyzing(false);
+      alert('텍스트 분석에 실패했습니다.');
+    }
+  };
+
+  // Handle text submit for selected date
+  const handleLogTextSubmit = async () => {
+    if (!logTextInput.trim()) return;
+
+    setIsAnalyzing(true);
+    setShowTextInputModal(false);
+    try {
+      const analysis = await analyzeFoodText(logTextInput);
+
+      const newMealData = {
+        date: `${selectedDate}T${new Date().toTimeString().slice(0, 8)}`,
+        imageUrl: 'https://images.unsplash.com/photo-1498837167922-ddd27525d352?q=80&w=400&auto=format&fit=crop',
+        foodName: analysis.foodName,
+        calories: analysis.calories,
+        analysis: analysis.analysis
+      };
+
+      const savedMeal = await addMealLog(patient.id, newMealData);
+
+      if (savedMeal) {
+        const updatedPatient = {
+          ...patient,
+          mealLogs: [savedMeal, ...patient.mealLogs]
+        };
+        onUpdatePatient(updatedPatient);
+        setLogTextInput('');
       } else {
         throw new Error('Meal log save failed');
       }
@@ -733,6 +775,14 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                     <Image size={18} />
                     <span className="text-sm">앨범</span>
                   </button>
+                  <button
+                    onClick={() => setShowTextInputModal(true)}
+                    disabled={isAnalyzing}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-600 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
+                  >
+                    <FileText size={18} />
+                    <span className="text-sm">글</span>
+                  </button>
                 </div>
                 {isAnalyzing && (
                   <div className="mt-3 flex items-center justify-center text-brand-600">
@@ -964,6 +1014,48 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                   className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
                 >
                   {isAnalyzing ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Text Input Modal for selected date */}
+      {showTextInputModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
+            <div className="p-4 bg-gray-100 border-b border-gray-200">
+              <h3 className="font-bold text-gray-800">
+                {parseInt(selectedDate.split('-')[1])}월 {parseInt(selectedDate.split('-')[2])}일 식단 기록
+              </h3>
+              <p className="text-sm text-gray-500">먹은 음식을 글로 입력해주세요.</p>
+            </div>
+
+            <div className="p-4">
+              <textarea
+                className="w-full p-4 bg-gray-50 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm min-h-[120px] mb-4 resize-none placeholder-gray-400"
+                placeholder="예: 닭가슴살 150g, 현미밥 1공기, 아몬드 5알&#13;&#10;자세히 적을수록 정확도가 올라갑니다."
+                value={logTextInput}
+                onChange={(e) => setLogTextInput(e.target.value)}
+              />
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setShowTextInputModal(false);
+                    setLogTextInput('');
+                  }}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleLogTextSubmit}
+                  disabled={!logTextInput.trim()}
+                  className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
+                >
+                  분석 및 기록
                 </button>
               </div>
             </div>
