@@ -1,8 +1,3 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
-// Initialize Gemini Client
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
-
 export interface FoodAnalysisResult {
   foodName: string;
   calories: number;
@@ -39,15 +34,15 @@ export const compressImage = (file: File): Promise<string> => {
         const canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
-        
+
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           reject(new Error("Could not get canvas context"));
           return;
         }
-        
+
         ctx.drawImage(img, 0, 0, width, height);
-        
+
         // Compress to JPEG with 0.7 quality
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
         resolve(compressedBase64);
@@ -61,44 +56,21 @@ export const compressImage = (file: File): Promise<string> => {
 export const analyzeFoodImage = async (base64Image: string): Promise<FoodAnalysisResult> => {
   try {
     // Clean the base64 string if it contains the header
-    const data = base64Image.split(',')[1] || base64Image;
+    const imageData = base64Image.split(',')[1] || base64Image;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: 'image/jpeg',
-              data: data
-            }
-          },
-          {
-            text: "이 음식 사진을 분석해주세요. 음식 이름, 추정 칼로리, 그리고 다이어트 환자를 위한 짧은 영양학적 조언(analysis)을 한국어로 제공해주세요."
-          }
-        ]
+    const response = await fetch('/api/analyze-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            foodName: { type: Type.STRING, description: "음식의 이름" },
-            calories: { type: Type.NUMBER, description: "추정 칼로리 (숫자만)" },
-            analysis: { type: Type.STRING, description: "영양 성분 분석 및 다이어트 조언 (한 문장)" }
-          },
-          required: ["foodName", "calories", "analysis"]
-        }
-      }
+      body: JSON.stringify({ imageData }),
     });
 
-    const resultText = response.text;
-    if (!resultText) {
-      throw new Error("No response from AI");
+    if (!response.ok) {
+      throw new Error('API request failed');
     }
 
-    return JSON.parse(resultText) as FoodAnalysisResult;
-
+    return await response.json();
   } catch (error) {
     console.error("Error analyzing food:", error);
     return {
@@ -111,38 +83,19 @@ export const analyzeFoodImage = async (base64Image: string): Promise<FoodAnalysi
 
 export const analyzeFoodText = async (text: string): Promise<FoodAnalysisResult> => {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: {
-        parts: [
-          {
-            text: `다음 음식 내용을 분석해주세요: "${text}". 
-            음식 이름(foodName), 총 추정 칼로리(calories, 숫자만), 그리고 다이어트 환자를 위한 짧은 영양학적 조언(analysis)을 한국어로 제공해주세요.
-            만약 입력된 텍스트가 음식이 아니라면 calories는 0으로, analysis는 '음식 정보를 정확히 입력해주세요'라고 응답하세요.`
-          }
-        ]
+    const response = await fetch('/api/analyze-text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            foodName: { type: Type.STRING, description: "음식의 이름 (예: 닭가슴살 샐러드)" },
-            calories: { type: Type.NUMBER, description: "추정 총 칼로리 (숫자)" },
-            analysis: { type: Type.STRING, description: "영양 성분 분석 및 다이어트 조언" }
-          },
-          required: ["foodName", "calories", "analysis"]
-        }
-      }
+      body: JSON.stringify({ text }),
     });
 
-    const resultText = response.text;
-    if (!resultText) {
-      throw new Error("No response from AI");
+    if (!response.ok) {
+      throw new Error('API request failed');
     }
 
-    return JSON.parse(resultText) as FoodAnalysisResult;
-
+    return await response.json();
   } catch (error) {
     console.error("Error analyzing food text:", error);
     return {
@@ -156,37 +109,20 @@ export const analyzeFoodText = async (text: string): Promise<FoodAnalysisResult>
 // Estimate calories from food name only
 export const estimateCalories = async (foodName: string): Promise<number> => {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: {
-        parts: [
-          {
-            text: `"${foodName}"의 1인분 기준 예상 칼로리를 숫자로만 알려주세요.
-            일반적인 한국 음식점/가정식 기준으로 추정해주세요.
-            예: 김치찌개 -> 300, 삼겹살 1인분 -> 550`
-          }
-        ]
+    const response = await fetch('/api/estimate-calories', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            calories: { type: Type.NUMBER, description: "추정 칼로리 (숫자만)" }
-          },
-          required: ["calories"]
-        }
-      }
+      body: JSON.stringify({ foodName }),
     });
 
-    const resultText = response.text;
-    if (!resultText) {
-      throw new Error("No response from AI");
+    if (!response.ok) {
+      throw new Error('API request failed');
     }
 
-    const result = JSON.parse(resultText);
+    const result = await response.json();
     return result.calories || 0;
-
   } catch (error) {
     console.error("Error estimating calories:", error);
     return 0;
