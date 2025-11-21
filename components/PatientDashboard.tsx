@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Patient, MealLog } from '../types';
 import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
-import { addWeightLog, addMealLog, uploadMealImage, updateMealLog } from '../services/supabaseService';
+import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search } from 'lucide-react';
+import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -280,6 +280,33 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       alert('칼로리 추정에 실패했습니다.');
     }
     setIsEstimatingCalories(false);
+  };
+
+  // Delete meal
+  const handleDeleteMeal = async () => {
+    if (!editingMeal) return;
+
+    const confirmed = window.confirm('이 식단 기록을 삭제하시겠습니까?');
+    if (!confirmed) return;
+
+    setIsAnalyzing(true);
+    try {
+      const success = await deleteMealLog(editingMeal.id);
+
+      if (success) {
+        // Remove from local state
+        const updatedMealLogs = patient.mealLogs.filter(m => m.id !== editingMeal.id);
+        onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
+        setShowEditMeal(false);
+        setEditingMeal(null);
+      } else {
+        alert('삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('삭제에 실패했습니다.');
+    }
+    setIsAnalyzing(false);
   };
 
   const handleTextSubmit = async (e: React.FormEvent) => {
@@ -821,6 +848,14 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
               {/* Buttons */}
               <div className="flex gap-2">
+                <button
+                  onClick={handleDeleteMeal}
+                  disabled={isAnalyzing}
+                  className="py-3 px-4 bg-red-100 text-red-600 rounded-xl font-medium hover:bg-red-200 transition-colors disabled:opacity-50"
+                  title="삭제"
+                >
+                  <Trash2 size={20} />
+                </button>
                 <button
                   onClick={handleEditCancel}
                   className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"

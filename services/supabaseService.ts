@@ -505,6 +505,22 @@ export const updateMealLog = async (mealId: string, updates: Partial<MealLog>): 
   }
 };
 
+// Delete meal log
+export const deleteMealLog = async (mealId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('meal_logs')
+      .delete()
+      .eq('id', mealId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error('Error deleting meal log:', error);
+    return false;
+  }
+};
+
 // Helper to convert base64 to Blob
 const base64ToBlob = (base64: string): Blob => {
   const parts = base64.split(';base64,');
