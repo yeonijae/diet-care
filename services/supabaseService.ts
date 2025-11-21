@@ -574,9 +574,26 @@ export const uploadMealImage = async (imageData: File | string, patientId: strin
   }
 };
 
-// Delete patient and all related data
+// Delete patient and all related data including storage files
 export const deletePatient = async (patientId: string): Promise<boolean> => {
   try {
+    // First, delete all images from storage for this patient
+    // Images are stored in meal-images bucket under patientId folder
+    const { data: files, error: listError } = await supabase.storage
+      .from('meal-images')
+      .list(patientId);
+
+    if (!listError && files && files.length > 0) {
+      const filePaths = files.map(file => `${patientId}/${file.name}`);
+      const { error: deleteStorageError } = await supabase.storage
+        .from('meal-images')
+        .remove(filePaths);
+
+      if (deleteStorageError) {
+        console.error('Error deleting storage files:', deleteStorageError);
+      }
+    }
+
     // Delete weight logs
     await supabase
       .from('weight_logs')
