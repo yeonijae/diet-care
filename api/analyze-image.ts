@@ -1,7 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -15,41 +13,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(400).json({ error: "Image data is required" });
     }
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: {
-        parts: [
-          {
-            inlineData: {
-              mimeType: "image/jpeg",
-              data: imageData,
-            },
-          },
-          {
-            text: "이 음식 사진을 분석해주세요. 음식 이름, 추정 칼로리, 그리고 다이어트 환자를 위한 짧은 영양학적 조언(analysis)을 한국어로 제공해주세요.",
-          },
-        ],
-      },
-      config: {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      generationConfig: {
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
+          type: SchemaType.OBJECT,
           properties: {
-            foodName: { type: Type.STRING, description: "음식의 이름" },
-            calories: { type: Type.NUMBER, description: "추정 칼로리 (숫자만)" },
-            analysis: { type: Type.STRING, description: "영양 성분 분석 및 다이어트 조언 (한 문장)" },
+            foodName: { type: SchemaType.STRING, description: "음식의 이름" },
+            calories: { type: SchemaType.NUMBER, description: "추정 칼로리 (숫자만)" },
+            analysis: { type: SchemaType.STRING, description: "영양 성분 분석 및 다이어트 조언 (한 문장)" },
           },
           required: ["foodName", "calories", "analysis"],
         },
       },
     });
 
-    const resultText = response.text;
-    if (!resultText) {
+    const result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageData,
+        },
+      },
+      "이 음식 사진을 분석해주세요. 음식 이름, 추정 칼로리, 그리고 다이어트 환자를 위한 짧은 영양학적 조언(analysis)을 한국어로 제공해주세요.",
+    ]);
+
+    const responseText = result.response.text();
+    if (!responseText) {
       throw new Error("No response from AI");
     }
 
-    return res.status(200).json(JSON.parse(resultText));
+    return res.status(200).json(JSON.parse(responseText));
   } catch (error) {
     console.error("Error analyzing food:", error);
     return res.status(500).json({
