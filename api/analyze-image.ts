@@ -46,12 +46,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     return res.status(200).json(JSON.parse(responseText));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error analyzing food:", error);
     return res.status(500).json({
       foodName: "분석 실패",
       calories: 0,
       analysis: "이미지를 분석할 수 없습니다. 다시 시도해주세요.",
+      error: error?.message || "Unknown error",
+      apiKeyExists: !!process.env.GEMINI_API_KEY
     });
   }
 }

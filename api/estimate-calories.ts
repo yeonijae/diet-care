@@ -41,8 +41,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const parsed = JSON.parse(responseText);
     return res.status(200).json({ calories: parsed.calories || 0 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error estimating calories:", error);
-    return res.status(500).json({ calories: 0 });
+    return res.status(500).json({
+      calories: 0,
+      error: error?.message || "Unknown error",
+      apiKeyExists: !!process.env.GEMINI_API_KEY
+    });
   }
 }
