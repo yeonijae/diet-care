@@ -250,22 +250,16 @@ export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | 
       .from('patients')
       .select('*')
       .eq('device_id', deviceId)
-      .single();
+      .maybeSingle();
 
     if (patientError) {
-      console.error('Supabase fetch error details:', {
-        message: patientError.message,
-        details: patientError.details,
-        hint: patientError.hint,
-        code: patientError.code,
-        fullError: JSON.stringify(patientError, null, 2)
-      });
-      // If no rows found, return null instead of throwing
-      if (patientError.code === 'PGRST116') {
-        console.log('No patient found for device ID, returning null');
-        return null;
-      }
+      console.error('Supabase fetch error:', patientError.message);
       throw patientError;
+    }
+
+    if (!patientData) {
+      console.log('No patient found for device ID, returning null');
+      return null;
     }
 
     // Fetch weight logs
