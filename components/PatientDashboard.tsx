@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
 import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2 } from 'lucide-react';
+import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -48,6 +48,9 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   // Text Input Modal for selected date
   const [showTextInputModal, setShowTextInputModal] = useState(false);
   const [logTextInput, setLogTextInput] = useState('');
+
+  // Weight Input for selected date
+  const [logWeight, setLogWeight] = useState('');
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -422,6 +425,33 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     }
   };
 
+  // Handle weight submit for selected date
+  const handleLogWeightSubmit = async () => {
+    if (!logWeight) return;
+
+    try {
+      const weightLog = await addWeightLog(patient.id, {
+        date: selectedDate,
+        weight: parseFloat(logWeight)
+      });
+
+      if (weightLog) {
+        const updatedPatient = {
+          ...patient,
+          currentWeight: parseFloat(logWeight),
+          weightLogs: [...patient.weightLogs, weightLog].sort((a, b) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          )
+        };
+        onUpdatePatient(updatedPatient);
+        setLogWeight('');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('체중 기록에 실패했습니다.');
+    }
+  };
+
   const weightDiff = patient.currentWeight - patient.startWeight;
 
   // Calendar Logic
@@ -697,9 +727,11 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                        return logDate === dateStr;
                     });
                     const totalCalories = dayMeals.reduce((sum, meal) => sum + meal.calories, 0);
-                    
+                    const dayWeight = patient.weightLogs.find(log => log.date === dateStr);
+
                     const isSelected = dateStr === selectedDate;
                     const isToday = dateStr === new Date().toISOString().split('T')[0];
+                    const hasData = dayMeals.length > 0 || dayWeight;
 
                     return (
                       <div key={day} className="flex flex-col items-center">
@@ -712,11 +744,20 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                           `}
                         >
                           {day}
+                          {dayWeight && !isSelected && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                          )}
                         </button>
-                        {dayMeals.length > 0 && (
-                          <span className={`text-[10px] mt-1 font-medium tracking-tighter ${isSelected ? 'text-brand-600 font-bold' : totalCalories > 0 ? 'text-gray-400' : 'text-amber-500'}`}>
-                            {totalCalories > 0 ? totalCalories : '●'}
-                          </span>
+                        {hasData && (
+                          <div className="flex flex-col items-center mt-1">
+                            {totalCalories > 0 ? (
+                              <span className={`text-[10px] font-medium tracking-tighter ${isSelected ? 'text-brand-600 font-bold' : 'text-gray-400'}`}>
+                                {totalCalories}
+                              </span>
+                            ) : dayMeals.length > 0 ? (
+                              <span className="text-[10px] text-amber-500">●</span>
+                            ) : null}
+                          </div>
                         )}
                       </div>
                     );
@@ -739,6 +780,43 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                   )}
                 </div>
               </div>
+
+              {/* Weight input for selected date */}
+              {(() => {
+                const selectedDateWeight = patient.weightLogs.find(log => log.date === selectedDate);
+                return (
+                  <div className="mb-4 bg-white p-3 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-2">
+                      <Scale size={18} className="text-gray-400" />
+                      <span className="text-sm font-medium text-gray-600">체중</span>
+                      {selectedDateWeight && (
+                        <span className="text-sm font-bold text-brand-600 ml-auto">
+                          {selectedDateWeight.weight} kg
+                        </span>
+                      )}
+                    </div>
+                    {!selectedDateWeight && (
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={logWeight}
+                          onChange={(e) => setLogWeight(e.target.value)}
+                          placeholder="체중 입력 (kg)"
+                          className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+                        />
+                        <button
+                          onClick={handleLogWeightSubmit}
+                          disabled={!logWeight}
+                          className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 transition-colors disabled:opacity-50"
+                        >
+                          기록
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Add meal to selected date */}
               <div className="mb-4">
