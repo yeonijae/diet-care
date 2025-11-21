@@ -98,7 +98,10 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
         // Switch to log tab and select the date of the photo
         setActiveTab('log');
-        setSelectedDate(photoTimestamp.split('T')[0]);
+        const photoDate = photoTimestamp.split('T')[0];
+        setSelectedDate(photoDate);
+        // Also change calendar month to show the photo date
+        setCurrentMonth(new Date(photoDate));
       } else {
         throw new Error('Meal log save failed');
       }
