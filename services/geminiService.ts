@@ -152,3 +152,43 @@ export const analyzeFoodText = async (text: string): Promise<FoodAnalysisResult>
     };
   }
 };
+
+// Estimate calories from food name only
+export const estimateCalories = async (foodName: string): Promise<number> => {
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: {
+        parts: [
+          {
+            text: `"${foodName}"의 1인분 기준 예상 칼로리를 숫자로만 알려주세요.
+            일반적인 한국 음식점/가정식 기준으로 추정해주세요.
+            예: 김치찌개 -> 300, 삼겹살 1인분 -> 550`
+          }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            calories: { type: Type.NUMBER, description: "추정 칼로리 (숫자만)" }
+          },
+          required: ["calories"]
+        }
+      }
+    });
+
+    const resultText = response.text;
+    if (!resultText) {
+      throw new Error("No response from AI");
+    }
+
+    const result = JSON.parse(resultText);
+    return result.calories || 0;
+
+  } catch (error) {
+    console.error("Error estimating calories:", error);
+    return 0;
+  }
+};

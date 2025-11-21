@@ -1,10 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Patient, MealLog } from '../types';
 import { Button } from './Button';
-import { analyzeFoodImage, analyzeFoodText, compressImage } from '../services/geminiService';
+import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
 import { addWeightLog, addMealLog, uploadMealImage, updateMealLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image } from 'lucide-react';
+import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -38,6 +38,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   const [editFoodName, setEditFoodName] = useState('');
   const [editCalories, setEditCalories] = useState('');
   const [editMealTime, setEditMealTime] = useState('');
+  const [isEstimatingCalories, setIsEstimatingCalories] = useState(false);
 
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -257,6 +258,28 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   const handleEditCancel = () => {
     setShowEditMeal(false);
     setEditingMeal(null);
+  };
+
+  // Estimate calories from food name using AI
+  const handleEstimateCalories = async () => {
+    if (!editFoodName.trim()) {
+      alert('음식 이름을 먼저 입력해주세요.');
+      return;
+    }
+
+    setIsEstimatingCalories(true);
+    try {
+      const calories = await estimateCalories(editFoodName.trim());
+      if (calories > 0) {
+        setEditCalories(calories.toString());
+      } else {
+        alert('칼로리를 추정할 수 없습니다. 직접 입력해주세요.');
+      }
+    } catch (error) {
+      console.error('Error estimating calories:', error);
+      alert('칼로리 추정에 실패했습니다.');
+    }
+    setIsEstimatingCalories(false);
   };
 
   const handleTextSubmit = async (e: React.FormEvent) => {
@@ -764,18 +787,36 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 />
               </div>
 
-              {/* Calories Input */}
+              {/* Calories Input with AI Estimate Button */}
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   예상 칼로리 (kcal)
                 </label>
-                <input
-                  type="number"
-                  value={editCalories}
-                  onChange={(e) => setEditCalories(e.target.value)}
-                  placeholder="예: 500"
-                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={editCalories}
+                    onChange={(e) => setEditCalories(e.target.value)}
+                    placeholder="예: 500"
+                    className="flex-1 p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleEstimateCalories}
+                    disabled={isEstimatingCalories || !editFoodName.trim()}
+                    className="px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                    title="AI로 칼로리 추정"
+                  >
+                    {isEstimatingCalories ? (
+                      <Loader2 size={18} className="animate-spin" />
+                    ) : (
+                      <Search size={18} />
+                    )}
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  음식 이름 입력 후 돋보기 버튼을 누르면 AI가 칼로리를 추정합니다
+                </p>
               </div>
 
               {/* Buttons */}
