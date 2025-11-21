@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Patient, MealLog } from '../types';
 import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage } from '../services/geminiService';
-import { addWeightLog, addMealLog, uploadMealImage } from '../services/supabaseService';
+import { addWeightLog, addMealLog, uploadMealImage, updateMealLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
 import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -31,6 +31,13 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   } | null>(null);
   const [manualFoodName, setManualFoodName] = useState('');
   const [manualMemo, setManualMemo] = useState('');
+
+  // Edit Meal State (for editing existing meals)
+  const [showEditMeal, setShowEditMeal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<MealLog | null>(null);
+  const [editFoodName, setEditFoodName] = useState('');
+  const [editCalories, setEditCalories] = useState('');
+  const [editMealTime, setEditMealTime] = useState('');
 
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -189,6 +196,67 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     setPendingImageData(null);
     setManualFoodName('');
     setManualMemo('');
+  };
+
+  // Open edit modal for a meal (especially for failed analysis meals)
+  const handleMealClick = (meal: MealLog) => {
+    setEditingMeal(meal);
+    setEditFoodName(meal.foodName);
+    setEditCalories(meal.calories.toString());
+    // Extract time from date (HH:MM format)
+    const mealDate = new Date(meal.date);
+    const hours = String(mealDate.getHours()).padStart(2, '0');
+    const minutes = String(mealDate.getMinutes()).padStart(2, '0');
+    setEditMealTime(`${hours}:${minutes}`);
+    setShowEditMeal(true);
+  };
+
+  // Save edited meal
+  const handleEditSave = async () => {
+    if (!editingMeal || !editFoodName.trim()) {
+      alert('음식 이름을 입력해주세요.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // Parse the new date/time
+      const originalDate = new Date(editingMeal.date);
+      const [hours, minutes] = editMealTime.split(':').map(Number);
+      const newDate = new Date(originalDate);
+      newDate.setHours(hours, minutes, 0, 0);
+
+      const updates = {
+        date: newDate.toISOString(),
+        foodName: editFoodName.trim(),
+        calories: parseInt(editCalories) || 0,
+        analysis: editingMeal.analysis === '(직접 입력)' ? '(수정됨)' : editingMeal.analysis
+      };
+
+      const updatedMeal = await updateMealLog(editingMeal.id, updates);
+
+      if (updatedMeal) {
+        // Update local state
+        const updatedMealLogs = patient.mealLogs.map(m =>
+          m.id === editingMeal.id ? updatedMeal : m
+        );
+        onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
+      }
+
+      setShowEditMeal(false);
+      setEditingMeal(null);
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error(error);
+      setIsAnalyzing(false);
+      alert('저장에 실패했습니다.');
+    }
+  };
+
+  // Cancel edit
+  const handleEditCancel = () => {
+    setShowEditMeal(false);
+    setEditingMeal(null);
   };
 
   const handleTextSubmit = async (e: React.FormEvent) => {
@@ -545,23 +613,35 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredLogs.map(meal => (
-                    <div key={meal.id} className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                      <img src={meal.imageUrl} alt={meal.foodName} className="w-20 h-20 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <h4 className="font-bold text-gray-900 truncate">{meal.foodName}</h4>
-                          <span className="text-xs font-medium bg-gray-100 px-2 py-1 rounded-md text-gray-600">
-                            {meal.calories} kcal
-                          </span>
+                  {filteredLogs.map(meal => {
+                    const isFailedAnalysis = meal.calories === 0 || meal.analysis === '(직접 입력)' || meal.analysis === '(수정됨)';
+                    return (
+                      <div
+                        key={meal.id}
+                        onClick={() => handleMealClick(meal)}
+                        className={`bg-white p-3 rounded-xl shadow-sm border flex gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300 cursor-pointer hover:shadow-md transition-shadow ${isFailedAnalysis ? 'border-amber-200 bg-amber-50/50' : 'border-gray-100'}`}
+                      >
+                        <img src={meal.imageUrl} alt={meal.foodName} className="w-20 h-20 rounded-lg object-cover flex-shrink-0 bg-gray-200" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <h4 className="font-bold text-gray-900 truncate">{meal.foodName}</h4>
+                            <span className={`text-xs font-medium px-2 py-1 rounded-md ${isFailedAnalysis ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {meal.calories} kcal
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">{meal.analysis}</p>
+                          <div className="flex justify-between items-center mt-2">
+                            <p className="text-xs text-gray-400">
+                              {new Date(meal.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </p>
+                            {isFailedAnalysis && (
+                              <span className="text-xs text-amber-600">탭하여 수정</span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{meal.analysis}</p>
-                        <p className="text-xs text-gray-400 mt-2">
-                          {new Date(meal.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -628,6 +708,87 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 <button
                   onClick={handleManualSubmit}
                   disabled={isAnalyzing || !manualFoodName.trim()}
+                  className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
+                >
+                  {isAnalyzing ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Meal Modal */}
+      {showEditMeal && editingMeal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
+            <div className="p-4 bg-brand-50 border-b border-brand-100">
+              <h3 className="font-bold text-brand-800">식단 정보 수정</h3>
+              <p className="text-sm text-brand-600">식사 정보를 입력해주세요.</p>
+            </div>
+
+            <div className="p-4">
+              {/* Preview Image */}
+              <div className="mb-4">
+                <img
+                  src={editingMeal.imageUrl}
+                  alt="식단 사진"
+                  className="w-full h-40 object-cover rounded-lg"
+                />
+              </div>
+
+              {/* Meal Time Input */}
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  식사 시간
+                </label>
+                <input
+                  type="time"
+                  value={editMealTime}
+                  onChange={(e) => setEditMealTime(e.target.value)}
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {/* Food Name Input */}
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  음식 이름 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editFoodName}
+                  onChange={(e) => setEditFoodName(e.target.value)}
+                  placeholder="예: 김치찌개, 샐러드"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {/* Calories Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  예상 칼로리 (kcal)
+                </label>
+                <input
+                  type="number"
+                  value={editCalories}
+                  onChange={(e) => setEditCalories(e.target.value)}
+                  placeholder="예: 500"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleEditCancel}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleEditSave}
+                  disabled={isAnalyzing || !editFoodName.trim()}
                   className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
                 >
                   {isAnalyzing ? '저장 중...' : '저장'}

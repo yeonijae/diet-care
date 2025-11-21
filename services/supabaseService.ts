@@ -471,6 +471,40 @@ export const addMealLog = async (patientId: string, mealLog: Omit<MealLog, 'id'>
   }
 };
 
+// Update meal log
+export const updateMealLog = async (mealId: string, updates: Partial<MealLog>): Promise<MealLog | null> => {
+  try {
+    const updateData: any = {};
+
+    if (updates.date !== undefined) updateData.date = updates.date;
+    if (updates.foodName !== undefined) updateData.food_name = updates.foodName;
+    if (updates.calories !== undefined) updateData.calories = updates.calories;
+    if (updates.analysis !== undefined) updateData.analysis = updates.analysis;
+
+    const { data, error } = await supabase
+      .from('meal_logs')
+      .update(updateData)
+      .eq('id', mealId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      id: data.id,
+      date: data.date,
+      uploadedAt: data.uploaded_at,
+      imageUrl: data.image_url,
+      foodName: data.food_name,
+      calories: data.calories,
+      analysis: data.analysis,
+    };
+  } catch (error) {
+    console.error('Error updating meal log:', error);
+    return null;
+  }
+};
+
 // Helper to convert base64 to Blob
 const base64ToBlob = (base64: string): Blob => {
   const parts = base64.split(';base64,');
