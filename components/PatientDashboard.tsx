@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { analyzeFoodImage, analyzeFoodText, compressImage, estimateCalories } from '../services/geminiService';
 import { addWeightLog, addMealLog, uploadMealImage, updateMealLog, deleteMealLog, updateWeightLog } from '../services/supabaseService';
 import { extractPhotoTimestamp } from '../services/exifService';
-import { Camera, Plus, TrendingDown, TrendingUp, Utensils, Activity, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale, CalendarDays } from 'lucide-react';
+import { Camera, TrendingDown, TrendingUp, Utensils, Home, Loader2, ChevronLeft, ChevronRight, FileText, Image, Search, Trash2, Scale, CalendarDays, User, LogOut } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface PatientDashboardProps {
@@ -14,7 +14,7 @@ interface PatientDashboardProps {
 }
 
 export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onUpdatePatient, onLogout }) => {
-  const [activeTab, setActiveTab] = useState<'home' | 'log'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'log' | 'profile'>('home');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [newWeight, setNewWeight] = useState('');
   
@@ -519,7 +519,6 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           <h1 className="text-xl font-bold text-gray-800">안녕하세요, {patient.name}님</h1>
           <p className="text-xs text-gray-500">오늘도 건강한 하루 되세요!</p>
         </div>
-        <Button variant="ghost" onClick={onLogout} className="!px-2 !py-1 text-xs">로그아웃</Button>
       </header>
 
       {/* Content Scroll Area */}
@@ -965,6 +964,85 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           </div>
         )}
 
+        {activeTab === 'profile' && (
+          <div className="p-4 space-y-4">
+            {/* Profile Card */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 bg-gradient-to-r from-brand-500 to-brand-600 text-white">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                    <User size={32} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">{patient.name}</h2>
+                    <p className="text-brand-100 text-sm">연이재한의원 회원</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-500 text-sm">시작 체중</span>
+                  <span className="font-medium">{patient.startWeight} kg</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-500 text-sm">현재 체중</span>
+                  <span className="font-medium">{patient.currentWeight} kg</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-500 text-sm">목표 체중</span>
+                  <span className="font-medium">{patient.targetWeight} kg</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-500 text-sm">총 변화</span>
+                  <span className={`font-bold ${patient.currentWeight - patient.startWeight <= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {patient.currentWeight - patient.startWeight <= 0 ? '' : '+'}{(patient.currentWeight - patient.startWeight).toFixed(1)} kg
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Statistics */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <h3 className="font-bold text-gray-800 mb-3">기록 통계</h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-brand-600">{patient.mealLogs.length}</p>
+                  <p className="text-xs text-gray-500">식단 기록</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-blue-600">{patient.weightLogs.length}</p>
+                  <p className="text-xs text-gray-500">체중 기록</p>
+                </div>
+              </div>
+            </div>
+
+            {/* App Info */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+              <h3 className="font-bold text-gray-800 mb-3">앱 정보</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                  <span className="text-gray-500 text-sm">버전</span>
+                  <span className="text-sm text-gray-700">v1.1.6</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-500 text-sm">개발</span>
+                  <span className="text-sm text-gray-700">연이재한의원</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center justify-center gap-2 py-4 bg-red-50 text-red-600 rounded-2xl font-medium hover:bg-red-100 transition-colors"
+            >
+              <LogOut size={20} />
+              로그아웃
+            </button>
+          </div>
+        )}
+
       </main>
 
       {/* Manual Input Modal (when AI analysis fails) */}
@@ -1195,30 +1273,14 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       )}
 
       {/* Bottom Nav */}
-      <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center pb-safe">
-        <button 
+      <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-6 py-3 flex justify-around items-center pb-safe">
+        <button
           onClick={() => setActiveTab('home')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'home' ? 'text-brand-600' : 'text-gray-400'}`}
         >
-          <Activity size={24} />
-          <span className="text-[10px] font-medium">대시보드</span>
+          <Home size={24} />
+          <span className="text-[10px] font-medium">홈</span>
         </button>
-        
-        <div className="w-px h-8 bg-gray-200" />
-
-        <button 
-           onClick={() => {
-             setActiveTab('home');
-             // We can focus the input or open the camera immediately here if needed
-             // For now just going to home is enough as the input is prominent
-           }}
-           className="flex flex-col items-center gap-1 text-gray-400 hover:text-brand-600 transition-colors"
-        >
-           <Plus size={24} />
-           <span className="text-[10px] font-medium">빠른 기록</span>
-        </button>
-
-        <div className="w-px h-8 bg-gray-200" />
 
         <button
           onClick={() => setActiveTab('log')}
@@ -1226,6 +1288,14 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         >
           <CalendarDays size={24} />
           <span className="text-[10px] font-medium">달력뷰</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('profile')}
+          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-brand-600' : 'text-gray-400'}`}
+        >
+          <User size={24} />
+          <span className="text-[10px] font-medium">내정보</span>
         </button>
       </nav>
     </div>
