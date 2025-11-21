@@ -242,6 +242,77 @@ export const getPatientByPhoneAndBirthdate = async (
   }
 };
 
+export const getPatientById = async (patientId: string): Promise<Patient | null> => {
+  try {
+    console.log('Fetching patient by ID:', patientId);
+
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('id', patientId)
+      .maybeSingle();
+
+    if (patientError) {
+      console.error('Supabase fetch error:', patientError.message);
+      throw patientError;
+    }
+
+    if (!patientData) {
+      console.log('No patient found for ID, returning null');
+      return null;
+    }
+
+    // Fetch weight logs
+    const { data: weightLogs, error: weightError } = await supabase
+      .from('weight_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: true });
+
+    if (weightError) throw weightError;
+
+    // Fetch meal logs
+    const { data: mealLogs, error: mealError } = await supabase
+      .from('meal_logs')
+      .select('*')
+      .eq('patient_id', patientData.id)
+      .order('date', { ascending: false });
+
+    if (mealError) throw mealError;
+
+    return {
+      id: patientData.id,
+      deviceId: patientData.device_id,
+      status: patientData.status,
+      name: patientData.name,
+      phoneNumber: patientData.phone_number,
+      birthdate: patientData.birthdate,
+      joinedAt: patientData.joined_at,
+      age: patientData.age,
+      targetWeight: patientData.target_weight,
+      currentWeight: patientData.current_weight,
+      startWeight: patientData.start_weight,
+      weightLogs: weightLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        weight: parseFloat(log.weight),
+      })),
+      mealLogs: mealLogs.map((log) => ({
+        id: log.id,
+        date: log.date,
+        uploadedAt: log.uploaded_at,
+        imageUrl: log.image_url,
+        foodName: log.food_name,
+        calories: log.calories,
+        analysis: log.analysis,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching patient by ID:', error);
+    return null;
+  }
+};
+
 export const getPatientByDeviceId = async (deviceId: string): Promise<Patient | null> => {
   try {
     console.log('Fetching patient by device ID:', deviceId);

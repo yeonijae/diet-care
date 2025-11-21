@@ -11,6 +11,7 @@ import {
   getDeviceId,
   createPatient,
   getPatientByDeviceId,
+  getPatientById,
   getPatientByKakaoId,
   getPatientByPhoneAndBirthdate,
   getAllPatients,
@@ -189,11 +190,9 @@ const App: React.FC = () => {
 
     // Always refresh from DB to get latest data including weight_logs and meal_logs
     if (currentPatient && currentPatient.id === updatedPatient.id) {
-      console.log('[handlePatientUpdate] Refreshing patient from DB...');
-      const deviceId = getDeviceId();
-      console.log('[handlePatientUpdate] Device ID:', deviceId);
+      console.log('[handlePatientUpdate] Refreshing patient from DB by ID...');
 
-      const refreshedPatient = await getPatientByDeviceId(deviceId);
+      const refreshedPatient = await getPatientById(updatedPatient.id);
       console.log('[handlePatientUpdate] Refreshed patient:', refreshedPatient);
       console.log('[handlePatientUpdate] Weight logs count:', refreshedPatient?.weightLogs?.length);
 
