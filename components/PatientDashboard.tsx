@@ -549,13 +549,13 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                       onChange={handleImageUpload}
                     />
 
-                    {/* Gallery Input */}
+                    {/* Gallery Input - accept specific types to hint photo library */}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/heic,image/heif,image/webp"
                       className="hidden"
                       ref={galleryInputRef}
-                      onChange={handleImageUpload}
+                      onChange={(e) => handleImageUpload(e)}
                     />
 
                     <div className="grid grid-cols-2 gap-4">
@@ -753,7 +753,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 />
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/heic,image/heif,image/webp"
                   className="hidden"
                   ref={logGalleryInputRef}
                   onChange={(e) => handleImageUpload(e, selectedDate)}
