@@ -9,7 +9,7 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'rec
 
 interface PatientDashboardProps {
   patient: Patient;
-  onUpdatePatient: (updatedPatient: Patient) => void;
+  onUpdatePatient: (updatedPatient: Patient) => Promise<void>;
   onLogout: () => void;
 }
 
@@ -77,7 +77,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         weightLogs: [...patient.weightLogs, savedLog]
       };
 
-      onUpdatePatient(updatedPatient);
+      await onUpdatePatient(updatedPatient);
       setNewWeight('');
       alert('체중이 기록되었습니다!');
     } else {
@@ -137,7 +137,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           ...patient,
           mealLogs: [savedMeal, ...patient.mealLogs]
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
 
         // Switch to log tab and select the date of the photo
         setActiveTab('log');
@@ -185,7 +185,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           ...patient,
           mealLogs: [savedMeal, ...patient.mealLogs]
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
 
         // Switch to log tab and select the date of the photo
         setActiveTab('log');
@@ -279,7 +279,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         const updatedMealLogs = patient.mealLogs.map(m =>
           m.id === editingMeal.id ? updatedMeal : m
         );
-        onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
+        await onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
       }
 
       setShowEditMeal(false);
@@ -334,7 +334,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       if (success) {
         // Remove from local state
         const updatedMealLogs = patient.mealLogs.filter(m => m.id !== editingMeal.id);
-        onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
+        await onUpdatePatient({ ...patient, mealLogs: updatedMealLogs });
         setShowEditMeal(false);
         setEditingMeal(null);
       } else {
@@ -370,7 +370,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           ...patient,
           mealLogs: [savedMeal, ...patient.mealLogs]
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
         setTextInput('');
 
         // Switch to log tab and select today
@@ -412,7 +412,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           ...patient,
           mealLogs: [savedMeal, ...patient.mealLogs]
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
         setLogTextInput('');
       } else {
         throw new Error('Meal log save failed');
@@ -451,7 +451,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           currentWeight: latestWeight,
           weightLogs: updatedWeightLogs
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
         setLogWeight('');
       }
     } catch (error) {
@@ -482,7 +482,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
           currentWeight: latestWeight,
           weightLogs: updatedWeightLogs
         };
-        onUpdatePatient(updatedPatient);
+        await onUpdatePatient(updatedPatient);
         setLogWeight('');
         setIsEditingWeight(false);
       }
@@ -1030,7 +1030,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-500 text-sm">버전</span>
-                  <span className="text-sm text-gray-700">v1.1.8</span>
+                  <span className="text-sm text-gray-700">v1.1.9</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-500 text-sm">개발</span>
