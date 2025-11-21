@@ -437,12 +437,19 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       });
 
       if (weightLog) {
+        const updatedWeightLogs = [...patient.weightLogs, weightLog].sort((a, b) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
+        // Get the most recent weight for currentWeight (sorted descending)
+        const sortedDesc = [...updatedWeightLogs].sort((a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+        const latestWeight = sortedDesc.length > 0 ? sortedDesc[0].weight : patient.currentWeight;
+
         const updatedPatient = {
           ...patient,
-          currentWeight: parseFloat(logWeight),
-          weightLogs: [...patient.weightLogs, weightLog].sort((a, b) =>
-            new Date(a.date).getTime() - new Date(b.date).getTime()
-          )
+          currentWeight: latestWeight,
+          weightLogs: updatedWeightLogs
         };
         onUpdatePatient(updatedPatient);
         setLogWeight('');
@@ -1023,7 +1030,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
               <div className="space-y-2">
                 <div className="flex justify-between items-center py-2 border-b border-gray-100">
                   <span className="text-gray-500 text-sm">버전</span>
-                  <span className="text-sm text-gray-700">v1.1.6</span>
+                  <span className="text-sm text-gray-700">v1.1.7</span>
                 </div>
                 <div className="flex justify-between items-center py-2">
                   <span className="text-gray-500 text-sm">개발</span>
