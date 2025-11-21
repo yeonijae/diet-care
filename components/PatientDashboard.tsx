@@ -693,28 +693,28 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
 
         {activeTab === 'log' && (
           <div className="flex flex-col min-h-full">
-            <div className="bg-white p-4 pb-6 shadow-sm border-b border-gray-100 sticky top-0 z-0">
+            <div className="bg-white px-4 py-2 shadow-sm border-b border-gray-100 sticky top-0 z-0">
               {/* Calendar Header */}
-              <div className="flex justify-between items-center mb-6">
-                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <ChevronLeft size={20} className="text-gray-600" />
+              <div className="flex justify-between items-center mb-2">
+                <button onClick={() => changeMonth(-1)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                  <ChevronLeft size={18} className="text-gray-600" />
                 </button>
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-base font-bold text-gray-900">
                   {year}년 {month + 1}월
                 </h2>
-                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <ChevronRight size={20} className="text-gray-600" />
+                <button onClick={() => changeMonth(1)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
+                  <ChevronRight size={18} className="text-gray-600" />
                 </button>
               </div>
 
               {/* Days Grid */}
               <div>
-                <div className="grid grid-cols-7 text-center mb-2">
+                <div className="grid grid-cols-7 text-center mb-1">
                   {['일', '월', '화', '수', '목', '금', '토'].map(d => (
-                    <div key={d} className="text-xs font-medium text-gray-400">{d}</div>
+                    <div key={d} className="text-[10px] font-medium text-gray-400">{d}</div>
                   ))}
                 </div>
-                <div className="grid grid-cols-7 gap-y-4 gap-x-1">
+                <div className="grid grid-cols-7 gap-y-1 gap-x-0.5">
                   {Array.from({ length: firstDay }).map((_, i) => (
                     <div key={`empty-${i}`} />
                   ))}
@@ -734,28 +734,28 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                     const hasData = dayMeals.length > 0 || dayWeight;
 
                     return (
-                      <div key={day} className="flex flex-col items-center">
+                      <div key={day} className="flex flex-col items-center py-0.5">
                         <button
                           onClick={() => setSelectedDate(dateStr)}
                           className={`
-                            w-9 h-9 rounded-full flex items-center justify-center text-sm transition-all relative
-                            ${isSelected ? 'bg-brand-600 text-white shadow-md shadow-brand-200' : 'text-gray-700 hover:bg-gray-50'}
+                            w-7 h-7 rounded-full flex items-center justify-center text-xs transition-all relative
+                            ${isSelected ? 'bg-brand-600 text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50'}
                             ${isToday && !isSelected ? 'border border-brand-200 text-brand-600 font-bold' : ''}
                           `}
                         >
                           {day}
                           {dayWeight && !isSelected && (
-                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full" />
+                            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
                           )}
                         </button>
                         {hasData && (
-                          <div className="flex flex-col items-center mt-1">
+                          <div className="flex items-center h-3">
                             {totalCalories > 0 ? (
-                              <span className={`text-[10px] font-medium tracking-tighter ${isSelected ? 'text-brand-600 font-bold' : 'text-gray-400'}`}>
+                              <span className={`text-[9px] font-medium ${isSelected ? 'text-brand-600 font-bold' : 'text-gray-400'}`}>
                                 {totalCalories}
                               </span>
                             ) : dayMeals.length > 0 ? (
-                              <span className="text-[10px] text-amber-500">●</span>
+                              <span className="text-[8px] text-amber-500">●</span>
                             ) : null}
                           </div>
                         )}
