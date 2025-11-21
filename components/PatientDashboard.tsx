@@ -591,7 +591,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                   }`}
                 >
                   <FileText size={18} />
-                  글로 기록
+                  직접입력
                 </button>
               </div>
 
@@ -912,7 +912,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                     className="flex-1 flex items-center justify-center gap-2 py-3 bg-gray-600 text-white rounded-xl font-medium hover:bg-gray-700 transition-colors disabled:opacity-50"
                   >
                     <FileText size={18} />
-                    <span className="text-sm">글</span>
+                    <span className="text-sm">직접입력</span>
                   </button>
                 </div>
                 {isAnalyzing && (
