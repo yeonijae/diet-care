@@ -21,7 +21,17 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   // Input Mode State
   const [inputMode, setInputMode] = useState<'camera' | 'text'>('camera');
   const [textInput, setTextInput] = useState('');
-  
+
+  // Manual Input State (when AI analysis fails)
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [pendingImageData, setPendingImageData] = useState<{
+    imageUrl: string;
+    photoTimestamp: string;
+    uploadedAt: string;
+  } | null>(null);
+  const [manualFoodName, setManualFoodName] = useState('');
+  const [manualMemo, setManualMemo] = useState('');
+
   // Calendar State
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -75,8 +85,20 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         throw new Error('Image upload failed');
       }
 
-      // Send compressed image to AI for analysis
-      const analysis = await analyzeFoodImage(compressedBase64);
+      // Try AI analysis
+      let analysis;
+      try {
+        analysis = await analyzeFoodImage(compressedBase64);
+      } catch (aiError) {
+        console.error('AI analysis failed:', aiError);
+        // Show manual input modal
+        setIsAnalyzing(false);
+        setPendingImageData({ imageUrl, photoTimestamp, uploadedAt });
+        setManualFoodName('');
+        setManualMemo('');
+        setShowManualInput(true);
+        return;
+      }
 
       const newMealData = {
         date: photoTimestamp, // Photo capture time from EXIF or current time
@@ -110,8 +132,63 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     } catch (error) {
       console.error(error);
       setIsAnalyzing(false);
-      alert('이미지 분석에 실패했습니다.');
+      alert('이미지 업로드에 실패했습니다.');
     }
+  };
+
+  // Handle manual input submission when AI fails
+  const handleManualSubmit = async () => {
+    if (!pendingImageData || !manualFoodName.trim()) {
+      alert('음식 이름을 입력해주세요.');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const newMealData = {
+        date: pendingImageData.photoTimestamp,
+        uploadedAt: pendingImageData.uploadedAt,
+        imageUrl: pendingImageData.imageUrl,
+        foodName: manualFoodName.trim(),
+        calories: 0, // Unknown calories
+        analysis: manualMemo.trim() || '(직접 입력)'
+      };
+
+      const savedMeal = await addMealLog(patient.id, newMealData);
+
+      if (savedMeal) {
+        const updatedPatient = {
+          ...patient,
+          mealLogs: [savedMeal, ...patient.mealLogs]
+        };
+        onUpdatePatient(updatedPatient);
+
+        // Switch to log tab and select the date of the photo
+        setActiveTab('log');
+        const photoDate = pendingImageData.photoTimestamp.split('T')[0];
+        setSelectedDate(photoDate);
+        setCurrentMonth(new Date(photoDate));
+      }
+
+      // Reset manual input state
+      setShowManualInput(false);
+      setPendingImageData(null);
+      setManualFoodName('');
+      setManualMemo('');
+      setIsAnalyzing(false);
+    } catch (error) {
+      console.error(error);
+      setIsAnalyzing(false);
+      alert('저장에 실패했습니다.');
+    }
+  };
+
+  // Cancel manual input
+  const handleManualCancel = () => {
+    setShowManualInput(false);
+    setPendingImageData(null);
+    setManualFoodName('');
+    setManualMemo('');
   };
 
   const handleTextSubmit = async (e: React.FormEvent) => {
@@ -492,6 +569,74 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         )}
 
       </main>
+
+      {/* Manual Input Modal (when AI analysis fails) */}
+      {showManualInput && pendingImageData && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-xl">
+            <div className="p-4 bg-amber-50 border-b border-amber-100">
+              <h3 className="font-bold text-amber-800">AI 분석 실패</h3>
+              <p className="text-sm text-amber-600">사진 정보를 직접 입력해주세요.</p>
+            </div>
+
+            <div className="p-4">
+              {/* Preview Image */}
+              <div className="mb-4">
+                <img
+                  src={pendingImageData.imageUrl}
+                  alt="업로드된 사진"
+                  className="w-full h-40 object-cover rounded-lg"
+                />
+              </div>
+
+              {/* Food Name Input */}
+              <div className="mb-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  음식 이름 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={manualFoodName}
+                  onChange={(e) => setManualFoodName(e.target.value)}
+                  placeholder="예: 김치찌개, 샐러드"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm"
+                />
+              </div>
+
+              {/* Memo Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  메모 (선택)
+                </label>
+                <textarea
+                  value={manualMemo}
+                  onChange={(e) => setManualMemo(e.target.value)}
+                  placeholder="예: 점심 식사, 외식"
+                  className="w-full p-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm resize-none"
+                  rows={2}
+                />
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleManualCancel}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleManualSubmit}
+                  disabled={isAnalyzing || !manualFoodName.trim()}
+                  className="flex-1 py-3 px-4 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
+                >
+                  {isAnalyzing ? '저장 중...' : '저장'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Bottom Nav */}
       <nav className="absolute bottom-0 w-full bg-white border-t border-gray-200 px-6 py-3 flex justify-between items-center pb-safe">
