@@ -47,6 +47,8 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
   
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
+  const logCameraInputRef = useRef<HTMLInputElement>(null);
+  const logGalleryInputRef = useRef<HTMLInputElement>(null);
 
   const handleWeightSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,14 +77,16 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, overrideDate?: string) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsAnalyzing(true);
     try {
       // Extract photo capture time from EXIF data (before compression)
-      const photoTimestamp = await extractPhotoTimestamp(file);
+      const photoTimestamp = overrideDate
+        ? `${overrideDate}T${new Date().toTimeString().slice(0, 8)}`
+        : await extractPhotoTimestamp(file);
       const uploadedAt = new Date().toISOString();
 
       // Compress image first (reduces size by ~70-90%)
@@ -104,13 +108,13 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
         setIsAnalyzing(false);
         setPendingImageData({ imageUrl, photoTimestamp, uploadedAt });
         setManualFoodName('');
-        setManualMemo('');
+        setManualCalories('');
         setShowManualInput(true);
         return;
       }
 
       const newMealData = {
-        date: photoTimestamp, // Photo capture time from EXIF or current time
+        date: photoTimestamp, // Photo capture time from EXIF or selected date
         uploadedAt: uploadedAt, // When the photo was uploaded
         imageUrl: imageUrl, // Use Supabase Storage URL (compressed)
         foodName: analysis.foodName,
@@ -143,6 +147,9 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
       setIsAnalyzing(false);
       alert('이미지 업로드에 실패했습니다.');
     }
+
+    // Clear the input value to allow uploading the same file again
+    e.target.value = '';
   };
 
   // Handle manual input submission when AI fails
@@ -682,15 +689,61 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({ patient, onU
                 <h3 className="text-sm font-bold text-gray-500">
                   {parseInt(selectedDate.split('-')[1])}월 {parseInt(selectedDate.split('-')[2])}일의 기록
                 </h3>
-                {dailyTotalCalories > 0 && (
-                  <span className="text-sm font-bold text-brand-600">
-                    총 {dailyTotalCalories} kcal
-                  </span>
+                <div className="flex items-center gap-2">
+                  {dailyTotalCalories > 0 && (
+                    <span className="text-sm font-bold text-brand-600">
+                      총 {dailyTotalCalories} kcal
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Add meal to selected date */}
+              <div className="mb-4">
+                {/* Hidden inputs for selected date upload */}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  ref={logCameraInputRef}
+                  onChange={(e) => handleImageUpload(e, selectedDate)}
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  ref={logGalleryInputRef}
+                  onChange={(e) => handleImageUpload(e, selectedDate)}
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => logCameraInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-600 text-white rounded-xl font-medium hover:bg-brand-700 transition-colors disabled:opacity-50"
+                  >
+                    <Camera size={18} />
+                    <span className="text-sm">카메라</span>
+                  </button>
+                  <button
+                    onClick={() => logGalleryInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-purple-600 text-white rounded-xl font-medium hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    <Image size={18} />
+                    <span className="text-sm">앨범</span>
+                  </button>
+                </div>
+                {isAnalyzing && (
+                  <div className="mt-3 flex items-center justify-center text-brand-600">
+                    <Loader2 className="animate-spin mr-2" size={18} />
+                    <span className="text-sm font-medium">분석중...</span>
+                  </div>
                 )}
               </div>
-              
+
               {filteredLogs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                   <Utensils size={32} className="mb-2 opacity-20" />
                   <p className="text-sm">이 날의 식단 기록이 없습니다.</p>
                 </div>
